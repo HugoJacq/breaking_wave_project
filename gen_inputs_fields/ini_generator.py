@@ -17,7 +17,7 @@ import numpy as np
 import toml
 from matplotlib import pyplot as plt
 from spec_gen import spectrum_PM, spectrum_gen_linear
-from progvar_gen import eta_random
+from progvar_gen import eta_random, gen_eta_velocities_at_z
 
 file_config = "../namlist.toml"
 
@@ -56,6 +56,15 @@ t = 0
 eta_tile, phase_tile = eta_random(t, kx_tile, ky_tile, F_kxky_tile, x_tile, y_tile)
 print("kpHs = %g" % (kp * np.std(eta_tile) * 4))
 print(eta_tile.shape)
+
+# my test
+z = np.zeros(x_tile.shape)
+(eta_tile, phase_tile), u_tile, v_tile, w_tile = gen_eta_velocities_at_z(
+    t, 0, kx_tile, ky_tile, F_kxky_tile, x_tile, y_tile
+)
+print("kpHs = %g" % (kp * np.std(eta_tile) * 4))
+print(eta_tile.shape)
+
 
 """ Visualization """
 plt.imshow(eta_tile, cmap="RdBu_r", vmax=eta_tile.max(), vmin=-eta_tile.max())

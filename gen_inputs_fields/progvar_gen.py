@@ -63,10 +63,12 @@ def eta_random(t, kx_tile, ky_tile, F_kxky_tile, x_tile, y_tile):
 """TO DO : In the same function as eta, generate also the velocities"""
 
 
-def gen_eta_velocities(t, z, kx_tile, ky_tile, F_kxky_tile, x_tile, y_tile):
+def gen_eta_velocities_at_z(t, z, kx_tile, ky_tile, F_kxky_tile, x_tile, y_tile):
     """
     Function generating the surface elevation and the velocities from
         the spectra for deep water linear waves
+
+        z = 0 at surface, positive upward
     """
     # Common
     np.random.seed(0)
@@ -90,6 +92,8 @@ def gen_eta_velocities(t, z, kx_tile, ky_tile, F_kxky_tile, x_tile, y_tile):
     A = (2 * F_kxky_tile * dkx * dky) ** 0.5  # amplitude of eta
     kmod = np.sqrt(kx_tile**2 + ky_tile**2)  # module of vector k
     B = np.sqrt(grav * kmod)  # coeff for velocities
+    z_actual = np.where(z < A, z, A)
+    C = np.exp(kmod * z_actual)
 
     def eta_xy(t, i1, i2, x_tile, y_tile, kx_tile, ky_tile):
         a = (
@@ -101,38 +105,73 @@ def gen_eta_velocities(t, z, kx_tile, ky_tile, F_kxky_tile, x_tile, y_tile):
         mode = A * np.cos(a)
         return i1, i2, np.sum(mode)
 
-    """ STOP: comment faire lire à basilisk un netcdf ?
-        AUSSI : il y a le remapping. Est-ce que vertical_remapping remap aussi les vitesses ?
-                *> dans breaking.c, il y a le remapping a tous les timesteps.
-                 dans l'ordre : ini vitesses et eta puis remap
-    """
-
-    def u_xy(i1, i2, x_tile, y_tile, kx_tile, ky_tile):
+    def u_xy(t, i1, i2, x_tile, y_tile, kx_tile, ky_tile):
         a = (
             kx_tile * x_tile[i1, i2]
             + ky_tile * y_tile[i1, i2]
             - omega_tile * t
             + phase_tile
         )
-        mode = A * B * np.kx_tile * np.cos(a)
+        mode = A * B * C * kx_tile * np.cos(a)
         return i1, i2, np.sum(mode)
 
-    def v_xy(i1, i2, x_tile, y_tile, kx_tile, ky_tile):
+    def v_xy(t, i1, i2, x_tile, y_tile, kx_tile, ky_tile):
         a = (
             kx_tile * x_tile[i1, i2]
             + ky_tile * y_tile[i1, i2]
             - omega_tile * t
             + phase_tile
         )
-        mode = A * np.cos(a)
+        mode = A * B * C * ky_tile * np.cos(a)
         return i1, i2, np.sum(mode)
 
-    def w_xy(i1, i2, x_tile, y_tile, kx_tile, ky_tile):
+    def w_xy(t, i1, i2, x_tile, y_tile, kx_tile, ky_tile):
         a = (
             kx_tile * x_tile[i1, i2]
             + ky_tile * y_tile[i1, i2]
             - omega_tile * t
             + phase_tile
         )
-        mode = A * np.cos(a)
+        mode = A * B * C * np.sin(a)
         return i1, i2, np.sum(mode)
+
+    """//compute """
+    # eta
+    results = Parallel(n_jobs=-1)(  # -1 means use all available CPU cores
+        delayed(eta_xy)(t, i1, i2, x_tile, y_tile, kx_tile, ky_tile)
+        for i1 in range(N_grid)
+        for i2 in range(N_grid)
+    )
+    for i1, i2, eta_val in results:
+        eta_tile[i1, i2] = eta_val
+
+    results = Parallel(n_jobs=-1)(  # -1 means use all available CPU cores
+        delayed(u_xy)(t, i1, i2, x_tile, y_tile, kx_tile, ky_tile)
+        for i1 in range(N_grid)
+        for i2 in range(N_grid)
+    )
+    for i1, i2, u_val in results:
+        u_tile[i1, i2] = u_val
+
+    results = Parallel(n_jobs=-1)(  # -1 means use all available CPU cores
+        delayed(v_xy)(t, i1, i2, x_tile, y_tile, kx_tile, ky_tile)
+        for i1 in range(N_grid)
+        for i2 in range(N_grid)
+    )
+    for i1, i2, v_val in results:
+        v_tile[i1, i2] = v_val
+
+    results = Parallel(n_jobs=-1)(  # -1 means use all available CPU cores
+        delayed(w_xy)(t, i1, i2, x_tile, y_tile, kx_tile, ky_tile)
+        for i1 in range(N_grid)
+        for i2 in range(N_grid)
+    )
+    for i1, i2, w_val in results:
+        w_tile[i1, i2] = w_val
+
+    print(eta_tile.shape, eta_tile[1, 1])
+    print(u_tile.shape, u_tile[1, 1])
+    print(v_tile.shape, v_tile[1, 1])
+    print(w_tile.shape, w_tile[1, 1])
+
+    return (eta_tile, phase_tile), u_tile, v_tile, w_tile
