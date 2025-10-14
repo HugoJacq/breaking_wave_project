@@ -169,9 +169,9 @@ def gen_eta_velocities_at_z(t, z, kx_tile, ky_tile, F_kxky_tile, x_tile, y_tile)
     for i1, i2, w_val in results:
         w_tile[i1, i2] = w_val
 
-    print(eta_tile.shape, eta_tile[1, 1])
-    print(u_tile.shape, u_tile[1, 1])
-    print(v_tile.shape, v_tile[1, 1])
-    print(w_tile.shape, w_tile[1, 1])
+    # print(eta_tile.shape, eta_tile[1, 1], eta_tile.nbytes / 1024**2, "MB")
+    # print(u_tile.shape, u_tile[1, 1], u_tile.nbytes / 1024**2, "MB")
+    # print(v_tile.shape, v_tile[1, 1])
+    # print(w_tile.shape, w_tile[1, 1])
 
     return (eta_tile, phase_tile), u_tile, v_tile, w_tile
