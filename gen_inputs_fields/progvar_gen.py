@@ -1,0 +1,138 @@
+import numpy as np
+from joblib import Parallel, delayed
+from tools import grav, cart2pol
+
+
+def eta_random(t, kx_tile, ky_tile, F_kxky_tile, x_tile, y_tile):
+    """Function to generate a random field given kx-ky spectrum and the x-y-array. Only
+    works with uniformly spaced kx-ky so far.
+    """
+
+    np.random.seed(0)
+    # It is only for focusing case but we don't set tb, xb (time and location of breaking)
+    #     tb = 40; xb = 0; yb = 0
+    #        phase_tile = -kx_tile*xb-ky_tile*yb+np.random.random_sample(kx_tile.shape)*2*np.pi
+    phase_tile = np.random.random_sample(kx_tile.shape) * 2 * np.pi
+    eta_tile = np.zeros(x_tile.shape)
+
+    kmod_cart_tile, theta_cart_tile = cart2pol(kx_tile, ky_tile)
+    # frequency based on kx or kmod (might need to change for capillary waves)
+    omega_tile = (grav * kmod_cart_tile) ** 0.5
+    dkx = kx_tile[0, 1] - kx_tile[0, 0]
+    dky = ky_tile[1, 0] - ky_tile[0, 0]
+    N_grid = x_tile.shape[0]
+
+    if True:  # parallelized version with joblib
+        ampl = (2 * F_kxky_tile * dkx * dky) ** 0.5
+
+        def eta_mode(t, i1, i2, x_tile, y_tile, kx_tile, ky_tile):
+            a = (
+                kx_tile * x_tile[i1, i2]
+                + ky_tile * y_tile[i1, i2]
+                - omega_tile * t
+                + phase_tile
+            )
+            mode = ampl * np.cos(a)
+            return i1, i2, np.sum(mode)
+
+        eta_tile = np.zeros((N_grid, N_grid))
+        results = Parallel(n_jobs=-1)(  # -1 means use all available CPU cores
+            delayed(eta_mode)(t, i1, i2, x_tile, y_tile, kx_tile, ky_tile)
+            for i1 in range(N_grid)
+            for i2 in range(N_grid)
+        )
+        # Assign results back into eta_tile
+        for i1, i2, eta_val in results:
+            eta_tile[i1, i2] = eta_val
+
+    else:  # Simple summation. To-do: parallelize this
+        for i1 in range(0, N_grid):
+            for i2 in range(0, N_grid):
+                ampl = (2 * F_kxky_tile * dkx * dky) ** 0.5
+                a = (
+                    (kx_tile * x_tile[i1, i2] + ky_tile * y_tile[i1, i2])
+                    - omega_tile * t
+                    + phase_tile
+                )
+                mode = ampl * (np.cos(a))  # uniform spacing in kx and ky
+                eta_tile[i1, i2] = np.sum(mode)
+
+    return eta_tile, phase_tile
+
+
+"""TO DO : In the same function as eta, generate also the velocities"""
+
+
+def gen_eta_velocities(t, z, kx_tile, ky_tile, F_kxky_tile, x_tile, y_tile):
+    """
+    Function generating the surface elevation and the velocities from
+        the spectra for deep water linear waves
+    """
+    # Common
+    np.random.seed(0)
+    phase_tile = np.random.random_sample(kx_tile.shape) * 2 * np.pi  # random phase
+
+    kmod_cart_tile, theta_cart_tile = cart2pol(kx_tile, ky_tile)
+    # frequency based on kx or kmod (might need to change for capillary waves)
+    omega_tile = np.sqrt(grav * kmod_cart_tile)
+    dkx = kx_tile[0, 1] - kx_tile[0, 0]
+    dky = ky_tile[1, 0] - ky_tile[0, 0]
+
+    N_grid = x_tile.shape[0]  # number of physical grid points
+
+    # initialisation
+    eta_tile = np.zeros(x_tile.shape)
+    u_tile = np.zeros(x_tile.shape)
+    v_tile = np.zeros(x_tile.shape)
+    w_tile = np.zeros(x_tile.shape)
+
+    # how to compute at one poisition i1, i2
+    A = (2 * F_kxky_tile * dkx * dky) ** 0.5  # amplitude of eta
+    kmod = np.sqrt(kx_tile**2 + ky_tile**2)  # module of vector k
+    B = np.sqrt(grav * kmod)  # coeff for velocities
+
+    def eta_xy(t, i1, i2, x_tile, y_tile, kx_tile, ky_tile):
+        a = (
+            kx_tile * x_tile[i1, i2]
+            + ky_tile * y_tile[i1, i2]
+            - omega_tile * t
+            + phase_tile
+        )
+        mode = A * np.cos(a)
+        return i1, i2, np.sum(mode)
+
+    """ STOP: comment faire lire à basilisk un netcdf ?
+        AUSSI : il y a le remapping. Est-ce que vertical_remapping remap aussi les vitesses ?
+                *> dans breaking.c, il y a le remapping a tous les timesteps.
+                 dans l'ordre : ini vitesses et eta puis remap
+    """
+
+    def u_xy(i1, i2, x_tile, y_tile, kx_tile, ky_tile):
+        a = (
+            kx_tile * x_tile[i1, i2]
+            + ky_tile * y_tile[i1, i2]
+            - omega_tile * t
+            + phase_tile
+        )
+        mode = A * B * np.kx_tile * np.cos(a)
+        return i1, i2, np.sum(mode)
+
+    def v_xy(i1, i2, x_tile, y_tile, kx_tile, ky_tile):
+        a = (
+            kx_tile * x_tile[i1, i2]
+            + ky_tile * y_tile[i1, i2]
+            - omega_tile * t
+            + phase_tile
+        )
+        mode = A * np.cos(a)
+        return i1, i2, np.sum(mode)
+
+    def w_xy(i1, i2, x_tile, y_tile, kx_tile, ky_tile):
+        a = (
+            kx_tile * x_tile[i1, i2]
+            + ky_tile * y_tile[i1, i2]
+            - omega_tile * t
+            + phase_tile
+        )
+        mode = A * np.cos(a)
+        return i1, i2, np.sum(mode)

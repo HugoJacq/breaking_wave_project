@@ -16,8 +16,8 @@ Author : Hugo Jacquet, october 2025
 import numpy as np
 import toml
 from matplotlib import pyplot as plt
-from tools import spectrum_PM, spectrum_gen_linear, eta_random
-
+from spec_gen import spectrum_PM, spectrum_gen_linear
+from progvar_gen import eta_random
 
 file_config = "../namlist.toml"
 
