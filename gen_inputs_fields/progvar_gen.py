@@ -60,9 +60,6 @@ def eta_random(t, kx_tile, ky_tile, F_kxky_tile, x_tile, y_tile):
     return eta_tile, phase_tile
 
 
-"""TO DO : In the same function as eta, generate also the velocities"""
-
-
 def gen_eta_velocities_at_z(t, z, kx_tile, ky_tile, F_kxky_tile, x_tile, y_tile):
     """
     Function generating the surface elevation and the velocities from
