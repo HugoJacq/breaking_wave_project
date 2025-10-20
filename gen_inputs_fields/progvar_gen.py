@@ -60,7 +60,7 @@ def eta_random(t, kx_tile, ky_tile, F_kxky_tile, x_tile, y_tile):
     return eta_tile, phase_tile
 
 
-def gen_eta_velocities_at_z(t, z, kx_tile, ky_tile, F_kxky_tile, x_tile, y_tile):
+def gen_velocities_at_z(t, z, kx_tile, ky_tile, F_kxky_tile, x_tile, y_tile):
     """
     Function generating the surface elevation and the velocities from
         the spectra for deep water linear waves
@@ -80,7 +80,6 @@ def gen_eta_velocities_at_z(t, z, kx_tile, ky_tile, F_kxky_tile, x_tile, y_tile)
     N_grid = x_tile.shape[0]  # number of physical grid points
 
     # initialisation
-    eta_tile = np.zeros(x_tile.shape)
     u_tile = np.zeros(x_tile.shape)
     v_tile = np.zeros(x_tile.shape)
     w_tile = np.zeros(x_tile.shape)
@@ -91,16 +90,6 @@ def gen_eta_velocities_at_z(t, z, kx_tile, ky_tile, F_kxky_tile, x_tile, y_tile)
     B = np.sqrt(grav * kmod)  # coeff for velocities
     z_actual = np.where(z < A, z, A)
     C = np.exp(kmod * z_actual)
-
-    def eta_xy(t, i1, i2, x_tile, y_tile, kx_tile, ky_tile):
-        a = (
-            kx_tile * x_tile[i1, i2]
-            + ky_tile * y_tile[i1, i2]
-            - omega_tile * t
-            + phase_tile
-        )
-        mode = A * np.cos(a)
-        return i1, i2, np.sum(mode)
 
     def u_xy(t, i1, i2, x_tile, y_tile, kx_tile, ky_tile):
         a = (
@@ -133,14 +122,6 @@ def gen_eta_velocities_at_z(t, z, kx_tile, ky_tile, F_kxky_tile, x_tile, y_tile)
         return i1, i2, np.sum(mode)
 
     """//compute """
-    # eta
-    results = Parallel(n_jobs=-1)(  # -1 means use all available CPU cores
-        delayed(eta_xy)(t, i1, i2, x_tile, y_tile, kx_tile, ky_tile)
-        for i1 in range(N_grid)
-        for i2 in range(N_grid)
-    )
-    for i1, i2, eta_val in results:
-        eta_tile[i1, i2] = eta_val
 
     results = Parallel(n_jobs=-1)(  # -1 means use all available CPU cores
         delayed(u_xy)(t, i1, i2, x_tile, y_tile, kx_tile, ky_tile)
@@ -171,4 +152,22 @@ def gen_eta_velocities_at_z(t, z, kx_tile, ky_tile, F_kxky_tile, x_tile, y_tile)
     # print(v_tile.shape, v_tile[1, 1])
     # print(w_tile.shape, w_tile[1, 1])
 
-    return (eta_tile, phase_tile), u_tile, v_tile, w_tile
+    return u_tile, v_tile, w_tile
+
+
+def gen_velocities(t, kx_tile, ky_tile, F_kxky_tile, x_tile, y_tile, z_array):
+    """Generate 3D velocities from a spectrum, using linear wave theory"""
+
+    Nx = x_tile.shape[1]
+    Ny = x_tile.shape[0]
+    Nz = z_array.shape[0]
+    u = np.zeros((Nz, Ny, Nx))
+    v = np.zeros(u.shape)
+    w = np.zeros(u.shape)
+
+    for i3, depth in enumerate(z_array):
+        u[i3, :, :], v[i3, :, :], w[i3, :, :] = gen_velocities_at_z(
+            t, depth, kx_tile, ky_tile, F_kxky_tile, x_tile, y_tile
+        )
+
+    return u, v, w
