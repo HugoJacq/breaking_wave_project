@@ -1,0 +1,14 @@
+#!/bin/sh
+set -x
+
+echo "STARTING THE RUN"
+FILE="$1"         # récupère l'argument 1 et le transforme en str
+name="${FILE%.*}" # récupère tout ce qu'il y a avant le dernier point '.'
+ext="${FILE##*.}" # récupère tout ce qu'il y a après le dernier point '.'
+
+NAMELIST='namlist.toml'
+
+cd $FILE/
+cp ../$NAMELIST .
+./$FILE $NAMELIST
+cd ..

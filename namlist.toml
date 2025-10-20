@@ -19,3 +19,4 @@ F_shape = 'PM'  # shape of the initial spectrum
 #
 N_grid = 1024 # number of x and y gridpoints
 L0 = 200      # domain size
+N_layer = 2   # number of layers
