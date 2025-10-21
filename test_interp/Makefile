@@ -2,8 +2,8 @@ PYTHON_CONFIG = python3.10-config
 PYTHON_INCLUDE = $(shell $(PYTHON_CONFIG) --includes)
 PYTHON_LIBS = $(shell $(PYTHON_CONFIG) --ldflags)
 
-exec=test_interp
-
+#exec=test_interp
+exec=test_interp_pol2cart
 
 all: $(exec)
 $(exec): $(exec).c interpolate.c

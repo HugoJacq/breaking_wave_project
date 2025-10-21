@@ -3,8 +3,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
-#define PI 3.14159265359
-
+#include "constant.h"
 
 void cart2pol(double x, double y, double rho, double phi) {
     rho = sqrt(x * x + y * y);
@@ -79,14 +78,10 @@ double interp_lin(double x[], double y[], int Nx, int Ny, double xi, double yi, 
    * */
   
   int j0, j1, i0, i1;
-  double Fi=0.0;
+  double Fi;
   find_ibounds(x, Nx, xi, &i0, &i1);
   find_ibounds(y, Ny, yi, &j0, &j1);
-
-  printf("X : low %f, target %f, high %f\n", x[i0], xi, x[i1]);
-  printf("Y : low %f, target %f, high %f\n", y[j0], yi, y[j1]);
   
-
   double dx = xi - x[i0];
   double dy = yi - y[j0];
   double deltaX = x[i1] - x[i0];
@@ -96,9 +91,10 @@ double interp_lin(double x[], double y[], int Nx, int Ny, double xi, double yi, 
   double f01 = F[i0*Nx+j1];
   double f00 = F[i0*Nx+j0];
   
-  printf("dx %f, deltaX %f\n", dx, deltaX);
-
-  printf("f11 %f, f10 %f, f01 %f, f00 %f\n", f11, f10, f01, f00);
+  // printf("j0 %d, j1 %d, i0 %d, i1 %d\n", j0, j1, i0, i1);
+  // printf("dx %f, dy %f\n", dx, dy);
+  // printf("deltaY %f, deltaX %f\n", deltaY, deltaX);
+  // printf("f11 %f, f10 %f, f01 %f, f00 %f\n", f11, f10, f01, f00);
   Fi = ( dx/deltaX * dy/deltaY * f11 +
       dy/deltaY * (1-dx/deltaX) * f01 +
       dx/deltaX * (1-dy/deltaY) * f10 +
