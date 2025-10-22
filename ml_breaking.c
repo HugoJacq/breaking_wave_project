@@ -12,6 +12,10 @@
 // Updated 2024/12/20: the newest Basilisk output_matrix is already compatible with MPI
 // #include "output_mpi.h" // Antoon's function for MPI compatible matrix output
 #include <bderembl/libs/extra.h>
+#include <spectrum.h>
+
+
+
 double nu = 0.;
 double dh[2] = {0., 1.};
 
