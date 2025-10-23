@@ -29,8 +29,9 @@ int main(int argc,char* argv[]) {
   // Search for the configuration file with a given path or read params.in
   if (argc == 2)
     strcpy(file_param,argv[1]); // default: params.in
-
+  // printf("nu before read %f\n", nu);
   read_params(file_param);
+  // printf("nu after read %f\n", nu);
 
   create_outdir(); // Create a directory 'outdir_000X'
   backup_config(file_param); 

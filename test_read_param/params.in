@@ -1,22 +1,2 @@
-# ============================================================
-# Configuration file for the multi_layer model using Basilisk
-#
-#
-#
-#
-# ============================================================
-#
-# INITIAL CONDITION
-#
-P = 0.02        # energy level (estimated so that kpHs is reasonable)
-coeff_kpL0 = 10 # kpL0 = coeff_kpL0 * pi
-N_mode = 32     # number of nodes
-N_power = 5     # directional spreading coeff
-F_shape = 'PM'  # shape of the initial spectrum
+nu = 0.1;
 
-#
-# DOMAIN DEFINITION
-#
-N_grid = 1024 # number of x and y gridpoints
-L0 = 200      # domain size
-N_layer = 2   # number of layers
