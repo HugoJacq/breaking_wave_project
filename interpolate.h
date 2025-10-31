@@ -79,6 +79,8 @@ double interp_lin(double x[], double y[], int Nx, int Ny, double xi, double yi, 
   double f10 = F[i1*Nx+j0];
   double f01 = F[i0*Nx+j1];
   double f00 = F[i0*Nx+j0];
+
+  
   
   // printf("j0 %d, j1 %d, i0 %d, i1 %d\n", j0, j1, i0, i1);
   // printf("dx %f, dy %f\n", dx, dy);
@@ -90,10 +92,4 @@ double interp_lin(double x[], double y[], int Nx, int Ny, double xi, double yi, 
       (1-dx/deltaX-dy/deltaY+ dx/deltaX*dy/deltaY) * f00 );
   
   return Fi;
-
-
-
-
-
-
 }
