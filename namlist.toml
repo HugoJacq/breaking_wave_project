@@ -19,5 +19,17 @@ F_shape = 'PM'  # shape of the initial spectrum
 #
 N_grid = 1024 # number of x and y gridpoints
 L = 200.0     # domain size
-N_layer = 2   # number of layers
-TEST = 1
+N_layer = 15  # number of layers
+h0 = 50.0     # depth of water (m)
+
+#
+# RUN PARAMETERS
+#
+tend = 10.0 # (s) time to end the simu
+
+#
+# SOLVER PARAMETERS
+#
+nu0 = 0.000025 # m2 s-2 Viscosity for vertical diffusion
+RANDOM = 6     # random integer (>1) for random number generator
+thetaH = 0.5   # theta_h for dumping fast barotropic modes
