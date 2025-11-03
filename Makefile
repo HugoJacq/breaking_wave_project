@@ -14,24 +14,46 @@ PARAM= namlist.toml
 SRC := $(exec).c 
 
 TARGET = $(exec)/$(exec)
+F_RESTART = $(exec)_restart/
 
 
+all: $(TARGET) $(exec)/$(PARAM)
 
-$(TARGET): $(SRC) $(DEPS)
+$(exec)/$(PARAM): $(PARAM)
+	$(info NAMLIST UPDATED !)
 	@mkdir -p $(exec)
 	@cp $(PARAM)  $(exec)/$(PARAM)
-	$(CC) -I$(INCLUDE) $(CFLAGS) $(EVENTS) -o $(exec)/$(exec) $(SRC) $(LIBGL) $(OPENGLIBS) $(MATHLIB) 
+
+$(TARGET): $(SRC) $(DEPS)
+	$(info COMPILING THE FILE $(exec).c:)
+	$(CC) -I$(INCLUDE) $(CFLAGS) $(EVENTS) -o $(exec)/$(exec) $(SRC) $(LIBGL) $(OPENGLIBS) $(MATHLIB)
 	@chmod +x $(exec)/$(exec)
 
-
 save:
-	cp -r $(exec) "$(exec)_save"
+	$(info SAVING THE FOLDER)
+	@cp -r $(exec) "$(exec)_save"
 
 clean:
-	rm -r $(exec)
+	rm -fr $(exec)
+	rm *.nc runlog
 
 
-run: $(TARGET)
-	$(TARGET) 2>&1 | /usr/bin/tee runlog
-	mv *.nc runlog $(exec)/
+run: $(TARGET) $(exec)/$(PARAM)
+	(cd $(exec); \
+		./$(exec) 2>&1 | /usr/bin/tee runlog; \
+		cd ..)
+
+# restart uses 
+# - ncks (with netcdf)
+# - tomli (https://github.com/blinxen/tomli)
+restart: $(TARGET)
+	@echo "NO YET CODED"
+	@#mkdir -p $(F_RESTART)
+	@#cp $(TARGET) $(F_RESTART)
+	@#ncks -d time,-1 $(exec)/out.nc $(F_RESTART)/restart.nc
+	@#cp $(exec)/namlist.toml $(F_RESTART)/namlist_prev.toml
+	@#tomli set -f $(F_RESTART)/namlist_prev.toml restart 1 --type int > $(F_RESTART)/namlist.toml
+
+
+
 

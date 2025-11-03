@@ -25,10 +25,12 @@ h0 = 50.0     # depth of water (m)
 #
 # RUN PARAMETERS
 #
-restart = 1                 # whether to restart from a file or not
-file_restart = 'restart.nc' # name of restart file if restart=true
+tend = 200.0                # (s) time to end the simu
 file_out = 'out.nc'         # name of output file
-tend = 50.0                 # (s) time to end the simu
+dtout = 1.0                 # dt for output in netcdf
+restart = 0
+file_restart = 'restart.nc' # name of restart file if restart=true
+
 
 #
 # SOLVER PARAMETERS
