@@ -13,16 +13,25 @@ DEPS= spectrum.h interpolate.h
 PARAM= namlist.toml
 SRC := $(exec).c 
 
+TARGET = $(exec)/$(exec)
 
 
-$(exec): $(SRC) $(DEPS)
-	mkdir -p $(exec)
-	cp $(PARAM)  $(exec)/$(PARAM)
+
+$(TARGET): $(SRC) $(DEPS)
+	@mkdir -p $(exec)
+	@cp $(PARAM)  $(exec)/$(PARAM)
 	$(CC) -I$(INCLUDE) $(CFLAGS) $(EVENTS) -o $(exec)/$(exec) $(SRC) $(LIBGL) $(OPENGLIBS) $(MATHLIB) 
+	@chmod +x $(exec)/$(exec)
+
 
 save:
 	cp -r $(exec) "$(exec)_save"
 
 clean:
 	rm -r $(exec)
+
+
+run: $(TARGET)
+	$(TARGET) 2>&1 | /usr/bin/tee runlog
+	mv *.nc runlog $(exec)/
 

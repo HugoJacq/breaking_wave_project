@@ -7,17 +7,29 @@
 #include "layered/nh.h"
 #include "layered/remap.h"
 // #include "layered/perfs.h"
-#include "bderembl/libs/extra.h"
-#include "bderembl/libs/netcdf_bas.h"
+#include "bderembl/libs/extra.h"      // parameters from namlist
+#include "bderembl/libs/netcdf_bas.h" // read/write netcdf files
 #define g_ 9.81
-#include "spectrum.h"
+#include "spectrum.h" // Initial conditions generation
+
+
+/*
+
+TO DO : 
+- add dimensions so that they can be saved in the netcdf
+- add ability to restart from netcdf file
+
+*/
+
+
 
 /*
 DEFAULT PARAMETERS
 
-[Length, Time]
+Dimensions : [Length, Time]
 */
 char namlist[80] = "namlist.toml"; // file name of namlist
+char file_out[20] = "out.nc";
 // -> Initial conditions
 double P = 0.2 [1, -1];     // energy level (estimated so that kpHs is reasonable)
 int coeff_kpL0 = 10 [];     // kpL0 = coeff_kpL0 * pi
@@ -31,6 +43,7 @@ int N_layer = 2 [];         // number of layers
 double kp = PI*10/200.0 [-1];// peak wave number
 double h0 = 1.0 [1];        // depth of water
 // -> Runtime parameters
+int restart = 0;            // 1: restart, 0: no restart
 double tend = 2.0;          // end time of simulation
 // -> saving outputs
 int pad = 4;                // number of 0-padding for ouput files
@@ -64,6 +77,7 @@ int main(int argc, char *argv[])
   add_param("nu0", &nu0, "double");
   add_param("RANDOM", &RANDOM, "int");
   add_param("thetaH", &thetaH, "double");
+  add_param("restart", &restart, "int");
   kp = PI * coeff_kpL0 / L; // kpL=coeff x pi peak wavelength
   
   // Search for the configuration file with a given path or read params.in
@@ -103,15 +117,6 @@ event init(i =  0)
   T_Spectrum spectrum;
   spectrum = spectrum_gen_linear(N_mode, N_power, L, P, kp);
   geometric_beta (1./3., true); // Varying layer thickness
-
-  double atX = 1.0;
-  double atY = 1.0;
-  double atZ = -1.0;
-  double ETA = wave(atX, atY, N_grid, spectrum);
-  double UX = u_x(atX, atY, atZ, N_grid, spectrum);
-  double UY = u_y(atX, atY, atZ, N_grid, spectrum);
-  double UZ = u_z(atX, atY, atZ, N_grid, spectrum);
-
   // printf("kx[0] %f, ky[0] %f\n", spectrum.kx[0], spectrum.ky[0]); // OK
   // printf("f_kxky[0] %f\n", spectrum.F_kxky[0]); // OK but weird output -220458615281.473083
   // printf("eta %f, ux %f, uy %f, uz %f\n", ETA, UX, UY, UZ);
@@ -132,18 +137,16 @@ event init(i =  0)
     }
   }
   fprintf (stderr,"Done initialization!\n");
-  sprintf(fileout, "%0*d.nc", pad, 0); // add the padding
-  create_nc({zb, h, u, w}, "ini.nc");
+  // sprintf(fileout, "%0*d.nc", pad, 0); // add the padding
+  create_nc({zb, h, u, w}, file_out);
   write_nc(); 
   // Here add save to netcdf 
 }
 
 event end (t = tend) {
-  dump();
   fprintf (stderr,"tend = %f \n", tend);
-  printf("N_Layer %d, nl %d", N_layer, nl);
-  create_nc({zb, h, u, w}, "end.nc");
+  // create_nc({zb, h, u, w}, "end.nc");
   write_nc();
-  // Here add save to netcdf 
+  // To Fix 31/10/25: This output is filled with nan. 
 
 }
