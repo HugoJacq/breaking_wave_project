@@ -1,7 +1,9 @@
 import xarray as xr
+import numpy as np
+from xgcm import Grid
 
 # read netcdf, set up for xgcm
-def read_data(filename: string):
+def read_data(filename: string, dtype='float32'):
     """
     This function reads the output of Basilisk (using bderembl/libs/netcdf_pas.h)
         and return a dataset with xgcm coordinates to allow for easy differentiation
@@ -11,8 +13,41 @@ def read_data(filename: string):
     OUPUT:
         dataset: a xr.Dataset
     """
-    ds_out = xr.open_mfdataset(filename)
+    ds = xr.open_mfdataset(filename)
+    zb = ds.zb[0,0,0,0].values # this is 4D but could be 2D. Waiting for update of bderemble/netcdf_pas.h
     
-    # building a new dataset with xgcm grid
-
+    # building z and left side of z
+    Nt, Nl, Ny, Nx = ds.w.shape
+    z = np.zeros((Nt, Nl, Ny, Nx))
+    z_l = np.zeros((Nt, Nl, Ny, Nx))
+    z[:,0,:,:] += ds.h[:,0,:,:].values/2
+    for k in range(1,Nl):
+        z[:,k,:,:] += (z[:,k-1,:,:]
+                    + ds.h[:,k-1,:,:].values/2
+                    + ds.h[:,k,:,:].values/2 )
+        z_l[:,k,:,:] = np.sum(ds.h[:,:k].values,axis=1)
+    ds['z'] = xr.DataArray(z+zb,dims=['time','level','y','x']).astype(dtype)
+    ds['z_l'] = xr.DataArray(z_l+zb,dims=['time','level','y','x']).astype(dtype)
+    
+    # adding left side coordinates
+    dx = (ds.x[1] - ds.x[0]).values
+    dy = (ds.y[1] - ds.y[0]).values
+    coords = {
+            "x_l":(["x_l"], ds.x.data - dx/2),
+            "y_l":(["y_l"], ds.y.data - dy/2),
+            "zl":(["zl"], ds.level.data), # doing nothing but its cleaner
+            "zl_l":(['zl_l'], ds.level.data-0.5)
+            }
+    ds = ds.assign_coords(coords)
+    
+    # xgcm grid
+    grid = Grid(ds,
+                coords={'X':{'center':'x','left':'x_l'},
+                        'Y':{'center':'y','left':'y_l'},
+                        'Z':{'center':'zl','left':'zl_l'}},
+                autoparse_metadata=False,
+                # periodic={'X':'True','Y':'True','Z':'False'},
+                boundary={'X':'periodic','Y':'periodic', 'Z':'fill'},
+                fill_value={'Z':0})
+    return ds, grid
 
