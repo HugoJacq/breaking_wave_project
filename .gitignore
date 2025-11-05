@@ -1,6 +1,7 @@
 ml_breaking/
 spectrum_jiarong.h
 .*
+multilayer_py/__pycache__/
 multilayer_py/gen_inputs_fields/__pycache__/
 multilayer_py/tools/__pycache__/
 multilayer_py/visualize/__pycache__/
