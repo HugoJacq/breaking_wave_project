@@ -39,7 +39,8 @@ def read_data(filename: string, dtype='float32'):
             "zl_l":(['zl_l'], ds.level.data-0.5)
             }
     ds = ds.assign_coords(coords)
-    
+    ds = ds.rename({'w','u.z'}) # this could be set in bderemble/netcdf_pas.h
+
     # xgcm grid
     grid = Grid(ds,
                 coords={'X':{'center':'x','left':'x_l'},
