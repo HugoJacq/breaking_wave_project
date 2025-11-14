@@ -17,15 +17,15 @@ F_shape = 'PM'  # shape of the initial spectrum
 #
 # DOMAIN DEFINITION
 #
-N_grid = 32  # 1024 number of x and y gridpoints
+N_grid = 6   # 1024=10 2^N_grid, number of x and y gridpoints
 L = 200.0    # domain size
-N_layer = 15 # number of layers
+N_layer = 16 # number of layers
 h0 = 50.0    # depth of water (m)
 
 #
 # RUN PARAMETERS
 #
-tend = 200.0                # (s) time to end the simu
+tend = 5.0                  # (s) time to end the simu
 file_out = 'out.nc'         # name of output file
 dtout = 1.0                 # dt for output in netcdf
 restart = 0

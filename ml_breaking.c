@@ -34,6 +34,9 @@ HOW TO CREATE A RESTART
 // #include "layered/perfs.h"
 #include "bderembl/libs/extra.h"      // parameters from namlist
 #include "bderembl/libs/netcdf_bas.h" // read/write netcdf files
+//#include "netcdf_bas.h"
+#include "view.h" // Basilisk visualization
+
 #define g_ 9.81
 #include "spectrum.h" // Initial conditions generation
 
@@ -63,7 +66,7 @@ int N_mode = 32 [];         // Number of modes in wavenumber space
 int N_power = 5 [];         // directional spreading coeff
 int F_shape = 0 [];         // shape of the initial spectrum
 // -> Domain definition
-int N_grid = 1024 [];       // number of x and y gridpoints
+int N_grid = 5 [];       // 2^N_grid : number of x and y gridpoints
 double L = 200.0 [1];       // domain size
 int N_layer = 2 [];         // number of layers
 double kp = PI*10/200.0 [-1];// peak wave number
@@ -82,6 +85,37 @@ int RANDOM = 2;             // For random number generator
 double thetaH = 0.5;        // theta_h for dumping fast barotropic modes
 
 
+// diag
+//double *dudz, *eps, *u_profile;
+double *u_profile;
+
+
+
+
+
+// void my_gradzl(scalar * s, vector * v){
+//   // Gradient in multilayer
+//   assert (list_len(f) == vectors_len(g));
+//
+//   scalar dsdx, dsdy, dsdzl, dzdzl; // temp var
+//
+//   foreach(){
+//     foreach_layer(){
+//       dsdx[] = (s[1,0] - s[-1,0])/Delta;
+//       dsdy[] = (s[0,1] - s[0,-1])/Delta;
+//       dzdx[] = (h[point.l])
+//       }
+//     }
+//   }
+
+
+
+
+
+
+
+
+
 
 
 
@@ -97,7 +131,7 @@ int main(int argc, char *argv[])
   add_param("N_power", &N_power, "int");
   add_param("F_shape", &F_shape, "int");
   add_param("N_grid", &N_grid, "int");
-  add_param("L", &N_grid, "double");
+  add_param("L", &L, "double");
   add_param("N_layer", &N_layer, "int");
   add_param("h0", &h0, "double");
   add_param("tend", &tend, "double");
@@ -119,7 +153,7 @@ int main(int argc, char *argv[])
   // Settings solver values from namlist values
   L0 = L;
   nu = nu0;
-  N = 1 << 7; // idk what this is used for 
+  N = 1 << N_grid; // 1*2^N_grid
   nl = N_layer;
   G = g_;
   theta_H = thetaH;
@@ -129,6 +163,12 @@ int main(int argc, char *argv[])
   origin (-L0/2., -L0/2.);
   periodic (right);
   periodic (top);
+  
+  // allocate diag
+  // dudz = (double*)malloc(nl * sizeof(double));
+  // eps = (double*)malloc(nl * sizeof(double));
+  u_profile = (double*)malloc(nl * sizeof(double));
+  
 
   fprintf (stderr, "Read in parameters!\n");
   run();
@@ -171,8 +211,79 @@ event init(i =  0) {
 
   fprintf (stderr,"Done initialization!\n");
   // sprintf(fileout, "%0*d.nc", pad, 0); // add the padding
-  create_nc({zb, h, u, w}, file_out);
+  create_nc({zb, h, u, w, eta}, file_out);
   write_nc(); 
+}
+
+
+// event film surface
+
+
+
+
+event compute_horizontal_avg (i++; t<= tend+1e-10){
+  fprintf(stderr, "dt %f\n",dt);
+  foreach(reduction(+:u_profile[:nl])){
+    foreach_layer(){
+
+      // fprintf(stderr, "t %f, i %d, value %f\n", t, i,  u.x[0,0,_layer] / (N*N) * dt / 1.0);
+      u_profile[point.l] += u.x[] / (N*N) * dt / 1.0;
+    }
+  }
+  fprintf(stderr, "t %f, i %d, value %f\n", t, i,  u_profile[0]);
+
+}
+// THIS IS BUGGED FOR NOW
+// event write_diag(t=0., t+=1.){
+//   static FILE * fp = fopen("u_profile.dat","a");
+//
+//   fprintf(fp, "%f ",t);
+//   for (int i=0; i<nl; ++i) {
+//     fprintf (fp, " %f", u_profile[_layer]);
+//   }
+//   fprintf(fp,"\n");
+// fclose(fp);
+// }
+  
+  // vector gradU[];
+  // vector gradV[];
+  // dudx = u.x[]
+  //
+  //
+  // gradient(u.x, gradU);
+  // gradient(u.y, gradV);
+  //
+  //
+  //
+  // foreach(reduction(+:dudz), reduction(+:eps)){
+  //   foreach_layer(){
+  //
+  //   }
+  // }
+ 
+
+// event image (t = end) {
+//   clear();
+//   static FILE * fp = fopen ("image.ppm", "w");
+//   output_ppm(eta, fp, min=-0.1, max=0.1);
+//
+// }
+
+event snapshot (t = end)
+{
+  clear();
+	//  view (fov = 17.3106, quat = {0.475152,0.161235,0.235565,0.832313},
+	// tx = -0.0221727, ty = -0.0140227, width = 1200, height = 768);
+  view( fov = 44, camera = "back", width = 1200, height = 768);
+  char s[80];
+  sprintf (s, "t = %.2f", t);
+  draw_string (s, size = 80);
+  for (double x = -1; x <= 1; x++)
+    translate (x) {
+      squares ("eta", linear = true, z = "eta", min = -0.15, max = 0.6, map=gray);
+    }
+  colorbar(map=gray, label="eta (m)", min=-1.0,max=2.0);
+  save ("snap.png");
 }
 
 
@@ -181,6 +292,10 @@ event output(t = 0.; t<= tend+1e-10; t+=dtout){
   write_nc();
 }
 
+event cleanup(t=end){
+  free(u_profile);
+}
+//
 // event end (t = tend) {
 //   fprintf (stderr,"tend = %f \n", tend);
 //   // create_nc({zb, h, u, w}, "end.nc");
