@@ -88,7 +88,7 @@ double thetaH = 0.5;        // theta_h for dumping fast barotropic modes
 // diag
 //double *dudz, *eps, *u_profile;
 double *u_profile;
-
+static FILE * fp;
 
 
 
@@ -168,7 +168,8 @@ int main(int argc, char *argv[])
   // dudz = (double*)malloc(nl * sizeof(double));
   // eps = (double*)malloc(nl * sizeof(double));
   u_profile = (double*)malloc(nl * sizeof(double));
-  
+  fp  = fopen("u_profile.dat","w"); // reset file
+  fclose(fp);
 
   fprintf (stderr, "Read in parameters!\n");
   run();
@@ -230,21 +231,21 @@ event compute_horizontal_avg (i++; t<= tend+1e-10){
       u_profile[point.l] += u.x[] / (N*N) * dt / 1.0;
     }
   }
-  fprintf(stderr, "t %f, i %d, value %f\n", t, i,  u_profile[0]);
+  fprintf(stderr, "t %f, i %d, value %f\n", t, i,  u_profile[nl-2]);
 
 }
-// THIS IS BUGGED FOR NOW
-// event write_diag(t=0., t+=1.){
-//   static FILE * fp = fopen("u_profile.dat","a");
-//
-//   fprintf(fp, "%f ",t);
-//   for (int i=0; i<nl; ++i) {
-//     fprintf (fp, " %f", u_profile[_layer]);
-//   }
-//   fprintf(fp,"\n");
-// fclose(fp);
-// }
-  
+event write_diag(t=0., t+=1.){
+  #pragma omp critical
+  {
+  fp  = fopen("u_profile.dat","a");
+  fprintf(fp, "%f ",t);
+  for (int i=0; i<nl; ++i) {
+    fprintf (fp, " %g", u_profile[i]);
+  }
+  fprintf(fp,"\n");
+  fclose(fp);
+  }
+}
   // vector gradU[];
   // vector gradV[];
   // dudx = u.x[]
