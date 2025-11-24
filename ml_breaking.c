@@ -238,9 +238,9 @@ event write_diag(t=0., t+=1.){
   #pragma omp critical
   {
   fp  = fopen("u_profile.dat","a");
-  fprintf(fp, "%f ",t);
+  // fprintf(fp, "%f ",t);
   for (int i=0; i<nl; ++i) {
-    fprintf (fp, " %g", u_profile[i]);
+    fprintf (fp, "%f %d %g\n", t, i, u_profile[i]);
   }
   fprintf(fp,"\n");
   fclose(fp);

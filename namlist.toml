@@ -25,7 +25,7 @@ h0 = 50.0    # depth of water (m)
 #
 # RUN PARAMETERS
 #
-tend = 5.0  # (s) time to end the simu
+tend = 20.0 # (s) time to end the simu
 dtout = 1.0 # dt for output in netcdf
 restart = 0 # whether to restart from restart.nc
 

@@ -45,6 +45,13 @@ run: $(TARGET) $(exec)/$(PARAM)
 		./$(exec) 2>&1 | /usr/bin/tee runlog; \
 		cd ..)
 
+
+plot: 
+	cp plot.gp $(exec)/
+	(cd $(exec); \
+		gnuplot plot.gp; \
+		cd ..)
+
 # restart uses 
 # - ncks (with netcdf)
 # - tomli (https://github.com/blinxen/tomli)
