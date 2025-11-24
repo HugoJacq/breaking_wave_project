@@ -5,6 +5,8 @@ CC=$(BASILISK)/qcc
 # CFLAGS= -autolink -grid=multigrid -g -Wall -pipe -D_FORTIFY_SOURCE=2 -O2 -fopenmp
 # CFLAGS= -autolink -g -Wall -pipe -D_FORTIFY_SOURCE=2 -O2 -fopenmp
 CFLAGS= -autolink -disable-dimensions -g -Wall -pipe -D_FORTIFY_SOURCE=2 -fopenmp
+#CFLAGS= -autolink -disable-dimensions -g -Wall -pipe -D_FORTIFY_SOURCE=2 -fopenmp -DDISPLAY=-1
+
 LIBGL= -L$(BASILISK)/gl -lglutils
 INCLUDE= "$(SANDBOX)"
 OPENGLIBS= -lfb_tiny
@@ -21,11 +23,11 @@ all: $(TARGET) $(exec)/$(PARAM)
 
 $(exec)/$(PARAM): $(PARAM)
 	$(info NAMLIST UPDATED !)
-	@mkdir -p $(exec)
 	@cp $(PARAM)  $(exec)/$(PARAM)
 
 $(TARGET): $(SRC) $(DEPS)
 	$(info COMPILING THE FILE $(exec).c:)
+	@mkdir -p $(exec)
 	$(CC) -I$(INCLUDE) $(CFLAGS) $(EVENTS) -o $(exec)/$(exec) $(SRC) $(LIBGL) $(OPENGLIBS) $(MATHLIB)
 	@chmod +x $(exec)/$(exec)
 
@@ -35,7 +37,7 @@ save:
 
 clean:
 	rm -fr $(exec)
-	rm *.nc runlog
+	rm -f *.nc runlog
 
 
 run: $(TARGET) $(exec)/$(PARAM)

@@ -36,7 +36,7 @@ HOW TO CREATE A RESTART
 #include "bderembl/libs/netcdf_bas.h" // read/write netcdf files
 //#include "netcdf_bas.h"
 #include "view.h" // Basilisk visualization
-
+// #include "display.h"
 #define g_ 9.81
 #include "spectrum.h" // Initial conditions generation
 
@@ -167,7 +167,7 @@ int main(int argc, char *argv[])
   // allocate diag
   // dudz = (double*)malloc(nl * sizeof(double));
   // eps = (double*)malloc(nl * sizeof(double));
-  u_profile = (double*)malloc(nl * sizeof(double));
+  u_profile = (double*)calloc(nl, sizeof(double));
   fp  = fopen("u_profile.dat","w"); // reset file
   fclose(fp);
 
@@ -275,15 +275,16 @@ event snapshot (t = end)
   clear();
 	//  view (fov = 17.3106, quat = {0.475152,0.161235,0.235565,0.832313},
 	// tx = -0.0221727, ty = -0.0140227, width = 1200, height = 768);
-  view( fov = 44, camera = "back", width = 1200, height = 768);
+  view( fov = 30, camera = "back", width = 800, height = 800);
   char s[80];
   sprintf (s, "t = %.2f", t);
   draw_string (s, size = 80);
   for (double x = -1; x <= 1; x++)
     translate (x) {
-      squares ("eta", linear = true, z = "eta", min = -0.15, max = 0.6, map=gray);
+      squares ("eta", linear = true, z = "eta", min = -1.0, max = 2.0 , map=gray);
     }
-  colorbar(map=gray, label="eta (m)", min=-1.0,max=2.0);
+  colorbar(map=gray, label="eta (m)", min=-1.0,max=2.0, pos={-0.95,-0.5},
+           levels=10);
   save ("snap.png");
 }
 
