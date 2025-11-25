@@ -40,7 +40,6 @@ def grad_velocities(ds, grid):
     dzdzl = grid.interp(grid.diff(ds.z, 'Z'), 'Z')
 
     ds['dudz'] = (dudzl/dzdzl).compute()
-    raise Exception
     ds['dudy'] = (dudy - ds['dudz']*dzdy).compute()
     ds['dudx'] = (dudx - ds['dudz']*dzdx).compute()
     ds['dvdz'] = (dvdzl/dzdzl).compute()
