@@ -4,11 +4,11 @@ CC=$(BASILISK)/qcc
 # CFLAGS="-autolink -disable-dimensions -grid=multigrid -g -Wall -pipe -D_FORTIFY_SOURCE=2 -O2 -fopenmp"
 # CFLAGS= -autolink -grid=multigrid -g -Wall -pipe -D_FORTIFY_SOURCE=2 -O2 -fopenmp
 # CFLAGS= -autolink -g -Wall -pipe -D_FORTIFY_SOURCE=2 -O2 -fopenmp
-CFLAGS= -autolink -disable-dimensions -g -Wall -pipe -D_FORTIFY_SOURCE=2 -fopenmp
-#CFLAGS= -autolink -disable-dimensions -g -Wall -pipe -D_FORTIFY_SOURCE=2 -fopenmp -DDISPLAY=-1
+#CFLAGS= -autolink -disable-dimensions -g -Wall -pipe -D_FORTIFY_SOURCE=2 -fopenmp
+CFLAGS= -autolink -disable-dimensions -g -Wall -pipe -D_FORTIFY_SOURCE=2 -fopenmp -DDISPLAY=-1
 
 LIBGL= -L$(BASILISK)/gl -lglutils
-INCLUDE= "$(SANDBOX)"
+INCLUDE= "$(MYSANDBOX)"
 OPENGLIBS= -lfb_tiny
 MATHLIB= -lm
 DEPS= spectrum.h interpolate.h
@@ -18,6 +18,10 @@ SRC := $(exec).c
 TARGET = $(exec)/$(exec)
 F_RESTART = $(exec)_restart/
 
+
+# Commande pour la visualisation
+# -> utilise le Makefile par défaut de Basilisk
+#  CFLAGS='-I/home/jacqhugo/Debut_these/basilisk_sandbox/ -DDISPLAY=-1 -disable-dimensions' make -f ~/Debut_these/basilisk/src/Makefile.defs ml_breaking.tst
 
 all: $(TARGET) $(exec)/$(PARAM)
 

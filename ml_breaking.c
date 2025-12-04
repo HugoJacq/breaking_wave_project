@@ -235,7 +235,8 @@ event compute_horizontal_avg (i++; t<= tend+1e-10){
 
 }
 event write_diag(t=0., t+=1.){
-  #pragma omp critical
+  #pragma omp critical // useless here as not in foreach loop.
+  // Todo: make this compatible with mpi, check pid of cpu.
   {
   fp  = fopen("u_profile.dat","a");
   // fprintf(fp, "%f ",t);
@@ -273,19 +274,53 @@ event write_diag(t=0., t+=1.){
 event snapshot (t = end)
 {
   clear();
-	//  view (fov = 17.3106, quat = {0.475152,0.161235,0.235565,0.832313},
-	// tx = -0.0221727, ty = -0.0140227, width = 1200, height = 768);
-  view( fov = 30, camera = "back", width = 800, height = 800);
+	
+  // 3/4 view
+  view (quat = {0.567, 0.137, 0.196, 0.789},
+      fov = 30, near = 0.01, far = 1000,
+      tx = 0.048, ty = -0.001, tz = -2.096,
+      width = 1398, height = 803);
+
+  
   char s[80];
   sprintf (s, "t = %.2f", t);
   draw_string (s, size = 80);
   for (double x = -1; x <= 1; x++)
     translate (x) {
-      squares ("eta", linear = true, z = "eta", min = -1.0, max = 2.0 , map=gray);
+      squares ("eta", linear = true, z = "eta*10", min = -1.0, max = 1.0 , map=gray);
     }
-  colorbar(map=gray, label="eta (m)", min=-1.0,max=2.0, pos={-0.95,-0.5},
+  box ();
+
+
+
+
+
+  colorbar(map=gray, label="eta (m)", min=-1.0,max=1.0, pos={-0.95,-0.5},
            levels=10);
-  save ("snap.png");
+  save ("snap_side.png");
+
+
+  // top view
+  clear();
+  view (quat = {0.000, 0.000, 0.000, 1.000},
+      fov = 30, near = 0.01, far = 1000,
+      tx = 0.000, ty = 0.000, tz = -2.505,
+      width = 1398, height = 803);
+
+
+  sprintf (s, "t = %.2f", t);
+  draw_string (s, size = 80);
+  for (double x = -1; x <= 1; x++)
+    translate (x) {
+      squares ("eta", min = -1.0, max = 1.0 , map=gray);
+    }
+  box ();
+
+  colorbar(map=gray, label="eta (m)", min=-1.0,max=1.0, pos={-0.95,-0.5},
+           levels=10);
+  save ("snap_top.png");
+
+
 }
 
 

@@ -1,5 +1,5 @@
 '''
-This file  gather diagnostics for a Basilisk simulation.
+This file gather diagnostics for a Basilisk simulation.
 
 References (and associated codes): 
 
