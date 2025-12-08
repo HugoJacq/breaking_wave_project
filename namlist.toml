@@ -12,7 +12,11 @@ P = 0.04        # energy level (estimated so that kpHs is reasonable)
 coeff_kpL0 = 10 # kpL0 = coeff_kpL0 * pi
 N_mode = 32     # number of nodes
 N_power = 5     # directional spreading coeff
-F_shape = 'PM'  # shape of the initial spectrum
+# shape of the initial spectrum
+# -1: read file init_spectrum
+# 1: PM
+# 2: JONSWAP (not yet coded)
+F_shape = 1
 
 #
 # DOMAIN DEFINITION

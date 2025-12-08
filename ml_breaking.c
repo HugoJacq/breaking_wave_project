@@ -33,8 +33,8 @@ HOW TO CREATE A RESTART
 #include "layered/remap.h"
 // #include "layered/perfs.h"
 #include "bderembl/libs/extra.h"      // parameters from namlist
-#include "bderembl/libs/netcdf_bas.h" // read/write netcdf files
-//#include "netcdf_bas.h"
+//#include "bderembl/libs/netcdf_bas.h" // read/write netcdf files
+#include "netcdf_bas.h"
 #include "view.h" // Basilisk visualization
 // #include "display.h"
 #define g_ 9.81
@@ -181,23 +181,27 @@ event init(i =  0) {
   if (restart!=1) {
   // Generate linealy spaced kx, ky according to specified # of modes, and
   //  interpolated F(kx,ky)
-  T_Spectrum spectrum;
-  spectrum = spectrum_gen_linear(N_mode, N_power, L, P, kp);
-  
-  foreach() {
-    zb[] = -h0;
-    eta[] = wave(x, y, N_grid, spectrum);
-    double H = wave(x, y, N_grid, spectrum) - zb[];
-    double z = zb[];
-    foreach_layer() {
-      h[] = H*beta[point.l];
-      z += h[]/2.;
-      u.x[] = u_x(x, y, z, N_grid, spectrum);
-      u.y[] = u_y(x, y, z, N_grid, spectrum);
-      w[] = u_z(x, y, z, N_grid, spectrum);
-      z += h[]/2.;
-      } 
+    T_Spectrum spectrum;
+    if (F_shape==1){
+      spectrum = spectrum_gen_linear(N_mode, N_power, L, P, kp);
     }
+    else{
+      spectrum = read_spectrum("init_spectrum", N_mode);
+    }
+    foreach() {
+      zb[] = -h0;
+      eta[] = wave(x, y, N_grid, spectrum);
+      double H = wave(x, y, N_grid, spectrum) - zb[];
+      double z = zb[];
+      foreach_layer() {
+        h[] = H*beta[point.l];
+        z += h[]/2.;
+        u.x[] = u_x(x, y, z, N_grid, spectrum);
+        u.y[] = u_y(x, y, z, N_grid, spectrum);
+        w[] = u_z(x, y, z, N_grid, spectrum);
+        z += h[]/2.;
+        } 
+      }
   }
   else {
     //fprintf(stderr, "restart = %d\n",restart);
@@ -222,7 +226,7 @@ event init(i =  0) {
 
 
 
-event compute_horizontal_avg (i++; t<= tend+1e-10){
+event compute_horizontal_avg (i++; t<=tend+1e-10){
   fprintf(stderr, "dt %f\n",dt);
   foreach(reduction(+:u_profile[:nl])){
     foreach_layer(){
@@ -235,16 +239,18 @@ event compute_horizontal_avg (i++; t<= tend+1e-10){
 
 }
 event write_diag(t=0., t+=1.){
-  #pragma omp critical // useless here as not in foreach loop.
   // Todo: make this compatible with mpi, check pid of cpu.
   {
   fp  = fopen("u_profile.dat","a");
   // fprintf(fp, "%f ",t);
   for (int i=0; i<nl; ++i) {
     fprintf (fp, "%f %d %g\n", t, i, u_profile[i]);
+    u_profile[i] = 0.;
   }
   fprintf(fp,"\n");
   fclose(fp);
+  
+
   }
 }
   // vector gradU[];
