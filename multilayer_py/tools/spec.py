@@ -8,7 +8,7 @@ https://github.com/ardhuin/waves in geosciences
 
 '''
 import xarray as xr
-
+import xrft
 
 def Spectra2D(eta: xr.DataArray, compute=False):
 
@@ -18,15 +18,13 @@ def Spectra2D(eta: xr.DataArray, compute=False):
     detrend = None
     window_correction = True
 
-    s = xrft.isotropic_power_spectrum(ds.z.isel(zl=-1).drop(['z']), 
+    s = xrft.isotropic_power_spectrum(eta, 
                                 dim=('x','y'), 
                                 window=window,
                                 nfactor=nfactor, 
                                 truncate=truncate, 
                                 detrend=detrend,
                                 window_correction=window_correction)
-
-
     return s
 
 

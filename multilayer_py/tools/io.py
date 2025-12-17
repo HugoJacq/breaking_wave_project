@@ -14,7 +14,7 @@ def read_data(filename: string, dtype='float32'):
         dataset: a xr.Dataset
     """
     ds = xr.open_mfdataset(filename)
-    zb = ds.zb[0,0,0,0].values # this is 4D but could be 2D. Waiting for update of bderemble/netcdf_pas.h
+    zb = ds.zb[0,0,0].values
     
     # building z and left side of z
     Nt, Nl, Ny, Nx = ds.w.shape
@@ -30,16 +30,20 @@ def read_data(filename: string, dtype='float32'):
     ds['z_l'] = xr.DataArray(z_l+zb,dims=['time','level','y','x']).astype(dtype)
     
     # adding left side coordinates
+    #   and z and z_l
     dx = (ds.x[1] - ds.x[0]).values
     dy = (ds.y[1] - ds.y[0]).values
     coords = {
             "x_l":(["x_l"], ds.x.data - dx/2),
             "y_l":(["y_l"], ds.y.data - dy/2),
-            "zl":(["zl"], ds.level.data), # doing nothing but its cleaner
-            "zl_l":(['zl_l'], ds.level.data-0.5)
+            #"zl":(["zl"], ds.level.data), # doing nothing but its cleaner
+            "zl_l":(['zl_l'], ds.level.data-0.5),
+            #"z":(['z'], ds.z.data),
+            #"z_l":(['z_l'], ds.z_l.data),
             }
     ds = ds.assign_coords(coords)
-    ds = ds.rename({'w','u.z'}) # this could be set in bderemble/netcdf_pas.h
+    #ds = ds.rename({'u.z':'w'}) # this could be set in bderemble/netcdf_pas.h
+    ds = ds.rename({'level':'zl', 'w':'u.z'})
 
     # xgcm grid
     grid = Grid(ds,

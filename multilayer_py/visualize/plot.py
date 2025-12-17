@@ -5,6 +5,11 @@ import xarray as xr
 def surface_visualizer(dataset : xr.Dataset, vmin: float, vmax: float):
     ''' TO DO '''
 
-def mean_profile(dataset: xr.Dataset, var: dict, method: str):
+def mean_profile(dataset: xr.Dataset, var: dict, method: str, fig):
     ''' TO DO'''
 
+
+def surf_spectra(spec, ax):
+    '''TO DO'''
+
+    
