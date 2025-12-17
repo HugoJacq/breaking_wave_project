@@ -5,7 +5,11 @@ CC=$(BASILISK)/qcc
 # CFLAGS= -autolink -grid=multigrid -g -Wall -pipe -D_FORTIFY_SOURCE=2 -O2 -fopenmp
 # CFLAGS= -autolink -g -Wall -pipe -D_FORTIFY_SOURCE=2 -O2 -fopenmp
 #CFLAGS= -autolink -disable-dimensions -g -Wall -pipe -D_FORTIFY_SOURCE=2 -fopenmp
-CFLAGS= -autolink -disable-dimensions -g -Wall -pipe -D_FORTIFY_SOURCE=2 -fopenmp -DDISPLAY=-1
+#CFLAGS= -autolink -disable-dimensions -g -Wall -pipe -D_FORTIFY_SOURCE=2 -fopenmp -DDISPLAY=-1
+
+
+# HPC
+CFLAGS= -autolink -disable-dimensions -g -Wall -pipe -D_FORTIFY_SOURCE=2 -source -D_MPI=1# -D_XOPEN_SOURCE=700
 
 LIBGL= -L$(BASILISK)/gl -lglutils
 INCLUDE= "$(MYSANDBOX)"

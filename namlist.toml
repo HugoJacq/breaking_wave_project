@@ -8,7 +8,7 @@
 #
 # INITIAL CONDITION
 #
-P = 0.04        # energy level (estimated so that kpHs is reasonable)
+P = 0.1         # energy level (estimated so that kpHs is reasonable)
 coeff_kpL0 = 10 # kpL0 = coeff_kpL0 * pi
 N_mode = 32     # number of nodes
 N_power = 5     # directional spreading coeff
@@ -21,17 +21,17 @@ F_shape = 1
 #
 # DOMAIN DEFINITION
 #
-N_grid = 6   # 1024=10 2^N_grid, number of x and y gridpoints
-L = 200.0    # domain size
-N_layer = 16 # number of layers
-h0 = 50.0    # depth of water (m)
+N_grid = 10  # 1024=10 2^N_grid, number of x and y gridpoints
+L = 200.0    # (m) domain size
+N_layer = 30 # number of layers
+h0 = 40.0    # =2pi/kp, depth of water (m)
 
 #
 # RUN PARAMETERS
 #
-tend = 20.0 # (s) time to end the simu
-dtout = 1.0 # dt for output in netcdf
-restart = 0 # whether to restart from restart.nc
+tend = 200.0 # 200 (s) time to end the simu
+dtout = 10.0 # 20 (s) dt for output in netcdf
+restart = 0  # whether to restart from restart.nc
 
 
 #

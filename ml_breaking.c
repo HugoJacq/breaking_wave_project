@@ -31,11 +31,12 @@ HOW TO CREATE A RESTART
 #include "layered/hydro.h"
 #include "layered/nh.h"
 #include "layered/remap.h"
+//#include "aaubert/layered_perso/remap.h"
 // #include "layered/perfs.h"
 #include "bderembl/libs/extra.h"      // parameters from namlist
 //#include "bderembl/libs/netcdf_bas.h" // read/write netcdf files
 #include "netcdf_bas.h"
-#include "view.h" // Basilisk visualization
+//#include "view.h" // Basilisk visualization
 // #include "display.h"
 #define g_ 9.81
 #include "spectrum.h" // Initial conditions generation
@@ -217,7 +218,7 @@ event init(i =  0) {
   fprintf (stderr,"Done initialization!\n");
   // sprintf(fileout, "%0*d.nc", pad, 0); // add the padding
   create_nc({zb, h, u, w, eta}, file_out);
-  write_nc(); 
+  //write_nc(); 
 }
 
 
@@ -227,7 +228,7 @@ event init(i =  0) {
 
 
 event compute_horizontal_avg (i++; t<=tend+1e-10){
-  fprintf(stderr, "dt %f\n",dt);
+  // fprintf(stderr, "dt %f\n",dt);
   foreach(reduction(+:u_profile[:nl])){
     foreach_layer(){
 
@@ -235,7 +236,7 @@ event compute_horizontal_avg (i++; t<=tend+1e-10){
       u_profile[point.l] += u.x[] / (N*N) * dt / 1.0;
     }
   }
-  fprintf(stderr, "t %f, i %d, value %f\n", t, i,  u_profile[nl-2]);
+  //fprintf(stderr, "t %f, i %d, value %f\n", t, i,  u_profile[nl-2]);
 
 }
 event write_diag(t=0., t+=1.){
@@ -277,57 +278,57 @@ event write_diag(t=0., t+=1.){
 //
 // }
 
-event snapshot (t = end)
-{
-  clear();
+// event snapshot (t = end)
+// {
+//   clear();
 	
   // 3/4 view
-  view (quat = {0.567, 0.137, 0.196, 0.789},
-      fov = 30, near = 0.01, far = 1000,
-      tx = 0.048, ty = -0.001, tz = -2.096,
-      width = 1398, height = 803);
+  // view (quat = {0.567, 0.137, 0.196, 0.789},
+  //     fov = 30, near = 0.01, far = 1000,
+  //     tx = 0.048, ty = -0.001, tz = -2.096,
+  //     width = 1398, height = 803);
+  //
+  //
+  // char s[80];
+  // sprintf (s, "t = %.2f", t);
+  // draw_string (s, size = 80);
+  // for (double x = -1; x <= 1; x++)
+  //   translate (x) {
+  //     squares ("eta", linear = true, z = "eta*10", min = -1.0, max = 1.0 , map=gray);
+  //   }
+  // box ();
+  //
+  //
+  //
+  //
+  //
+  // colorbar(map=gray, label="eta (m)", min=-1.0,max=1.0, pos={-0.95,-0.5},
+  //          levels=10);
+  // save ("snap_side.png");
+  //
+  //
+  // // top view
+  // clear();
+  // view (quat = {0.000, 0.000, 0.000, 1.000},
+  //     fov = 30, near = 0.01, far = 1000,
+  //     tx = 0.000, ty = 0.000, tz = -2.505,
+  //     width = 1398, height = 803);
+  //
+  //
+  // sprintf (s, "t = %.2f", t);
+  // draw_string (s, size = 80);
+  // for (double x = -1; x <= 1; x++)
+  //   translate (x) {
+  //     squares ("eta", min = -1.0, max = 1.0 , map=gray);
+  //   }
+  // box ();
+  //
+  // colorbar(map=gray, label="eta (m)", min=-1.0,max=1.0, pos={-0.95,-0.5},
+  //          levels=10);
+  // save ("snap_top.png");
 
-  
-  char s[80];
-  sprintf (s, "t = %.2f", t);
-  draw_string (s, size = 80);
-  for (double x = -1; x <= 1; x++)
-    translate (x) {
-      squares ("eta", linear = true, z = "eta*10", min = -1.0, max = 1.0 , map=gray);
-    }
-  box ();
 
-
-
-
-
-  colorbar(map=gray, label="eta (m)", min=-1.0,max=1.0, pos={-0.95,-0.5},
-           levels=10);
-  save ("snap_side.png");
-
-
-  // top view
-  clear();
-  view (quat = {0.000, 0.000, 0.000, 1.000},
-      fov = 30, near = 0.01, far = 1000,
-      tx = 0.000, ty = 0.000, tz = -2.505,
-      width = 1398, height = 803);
-
-
-  sprintf (s, "t = %.2f", t);
-  draw_string (s, size = 80);
-  for (double x = -1; x <= 1; x++)
-    translate (x) {
-      squares ("eta", min = -1.0, max = 1.0 , map=gray);
-    }
-  box ();
-
-  colorbar(map=gray, label="eta (m)", min=-1.0,max=1.0, pos={-0.95,-0.5},
-           levels=10);
-  save ("snap_top.png");
-
-
-}
+//}
 
 
 event output(t = 0.; t<= tend+1e-10; t+=dtout){
