@@ -9,3 +9,4 @@ multilayer_py/visualize/__pycache__/
 _ml_breaking.c
 ml_breaking_save/
 *{png,svg}
+**/*{png,svg}
