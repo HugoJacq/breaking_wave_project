@@ -1,22 +1,39 @@
 exec=ml_breaking
 
 CC=$(BASILISK)/qcc
+MPICC=mpicc
+MPICCFLAGS += -std=c99 -02 -g -Wall -D_MPI=1
+LDFLAGS = -lgfortran -L${BASILISK}/ppr -lppr -lm
+
+
+
+
+
+
+
+# save
+# CFLAGS= -autolink -disable-dimensions -g -Wall -pipe -D_FORTIFY_SOURCE=2 -fopenmp
+# CFLAGS= -autolink -disable-dimensions -g -Wall -pipe -D_FORTIFY_SOURCE=2 -fopenmp -DDISPLAY=-1
+
+
+
 # CFLAGS="-autolink -disable-dimensions -grid=multigrid -g -Wall -pipe -D_FORTIFY_SOURCE=2 -O2 -fopenmp"
 # CFLAGS= -autolink -grid=multigrid -g -Wall -pipe -D_FORTIFY_SOURCE=2 -O2 -fopenmp
 # CFLAGS= -autolink -g -Wall -pipe -D_FORTIFY_SOURCE=2 -O2 -fopenmp
-#CFLAGS= -autolink -disable-dimensions -g -Wall -pipe -D_FORTIFY_SOURCE=2 -fopenmp
-#CFLAGS= -autolink -disable-dimensions -g -Wall -pipe -D_FORTIFY_SOURCE=2 -fopenmp -DDISPLAY=-1
+
+
+CFLAGS= -autolink -disable-dimensions -g -Wall -pipe -D_FORTIFY_SOURCE=2 -D_MPI=1
 
 
 # HPC
-CFLAGS= -autolink -disable-dimensions -g -Wall -pipe -D_FORTIFY_SOURCE=2 -source -D_MPI=1# -D_XOPEN_SOURCE=700
+# CFLAGS= -autolink -disable-dimensions -g -Wall -pipe -D_FORTIFY_SOURCE=2 -source -D_MPI=1
 
 LIBGL= -L$(BASILISK)/gl -lglutils
 INCLUDE= "$(MYSANDBOX)"
 OPENGLIBS= -lfb_tiny
 MATHLIB= -lm
 DEPS= spectrum.h interpolate.h
-PARAM= namlist.toml
+PARAM= namelist.toml
 SRC := $(exec).c 
 
 TARGET = $(exec)/$(exec)
@@ -36,7 +53,7 @@ $(exec)/$(PARAM): $(PARAM)
 $(TARGET): $(SRC) $(DEPS)
 	$(info COMPILING THE FILE $(exec).c:)
 	@mkdir -p $(exec)
-	$(CC) -I$(INCLUDE) $(CFLAGS) $(EVENTS) -o $(exec)/$(exec) $(SRC) $(LIBGL) $(OPENGLIBS) $(MATHLIB)
+	CC99='mpicc -std=c99' $(CC) -I$(INCLUDE) $(CFLAGS) $(EVENTS) -o $(exec)/$(exec) $(SRC) $(LIBGL) $(OPENGLIBS) $(MATHLIB)
 	@chmod +x $(exec)/$(exec)
 
 save:
