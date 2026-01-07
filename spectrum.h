@@ -40,6 +40,7 @@ double randInRange(int min, int max)
 
 // Some common spectra
 double spectrum_PM(double P, double kp, double kmod) {
+  // Note: P here is in fact P/sqrt(g) in the PM spectrum equation
   return P * pow(kmod, -2.5) * exp(-1.25 * pow(kp / kmod, 2.0));
 }
 double spectrum_JONSWAP(double alpha, double kp, double kmod) {

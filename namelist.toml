@@ -8,7 +8,7 @@
 #
 # INITIAL CONDITION
 #
-P = 0.063       # energy level
+P = 0.02        # energy level
 coeff_kpL0 = 10 # kpL0 = coeff_kpL0 * pi
 N_mode = 32     # number of nodes
 N_power = 5     # directional spreading coeff
