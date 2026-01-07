@@ -57,7 +57,7 @@ DEFAULT PARAMETERS
 
 Dimensions : [Length, Time]
 */
-char namlist[80] = "namlist.toml";    // file name of namlist
+char namlist[80] = "namelist.toml";    // file name of namlist
 char file_out[20] = "out.nc";         // file name of output
 char file_restart[20] = "restart.nc"; // file name of restart
 // -> Initial conditions
