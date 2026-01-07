@@ -21,6 +21,7 @@ from multilayer_py.tools.diags import interpz, vorticity, dissipation
 
 #filename="/home/jacqhugo/Debut_these/breaking_wave_project/ml_breaking/out.nc"
 filename="/home/jacqhugo/breaking_wave_project/ml_breaking_save/out.nc"
+filename="/home/jacqhugo/breaking_wave_project/output_N8_P0.1/out.nc"
 # getting back Jiarong's data
 Jpath = "/home/jacqhugo/breaking_wave_project/multilayer_py/data_Jiarong/"
 
@@ -69,7 +70,7 @@ Js_120 = np.loadtxt(Jpath+'2023_fig3c_149.txt',skiprows=1,delimiter=",")
 
 Js = [Js_0, Js_20, Js_100, Js_120]
 
-at_t = [0,2, 7] # [0, 20, 100, 120]
+at_t = [0, 20, 100, 120]
 colors = plt.get_cmap('plasma')(np.linspace(0, 1, len(at_t)))
 # Computing the spectra at some timesteps
 s_eta = Spectra2D(ds.eta, compute=False)
@@ -184,5 +185,5 @@ ax[2].semilogx(diss_interp2, znew, c='b', ls='--', label='abs 2')
 
 
 
-#plt.show()
+plt.show()
 
