@@ -86,9 +86,11 @@ $(TARGET_HPC): $(SRC) $(DEPS)
 		$(info COMPILING THE FILE $(EXEC).c FOR HPC:)
 	@mkdir -p $(EXEC)
 	$(CC) -I$(INCLUDE) $(CFLAGS_HPC) $(EVENTS) -o $(TARGET_HPC) $(SRC) $(LIBGL) $(OPENGLIBS) $(MATHLIB)
-	@chmod +x $(TARGET_HPC)
+	mv _$(EXEC).c $(TARGET_HPC)
 
 hpc: $(TARGET_HPC)
+
+mpi: $(TARGET_MPI)
 
 save:
 	$(info SAVING THE FOLDER)
