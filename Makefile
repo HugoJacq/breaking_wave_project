@@ -84,6 +84,8 @@ hpc: $(TARGET_HPC)
 
 mpi: $(TARGET_MPI)
 
+openmp: $(TARGET)
+
 save:
 	$(info SAVING THE FOLDER)
 	@cp -r $(EXEC) "$(EXEC)_save"
