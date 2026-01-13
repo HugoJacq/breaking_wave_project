@@ -16,10 +16,9 @@ TARGET_HPC = $(EXEC)/_$(EXEC).c
 F_RESTART = $(EXEC)_restart/
 
 # SOURCES
-DEPS= *.h
+DEPS= $(wildcard *.h)
 PARAMETERS = namelist
 PARAM= $(PARAMETERS).toml
-SRC_DIR=src
 SRC = $(EXEC).c 
 
 
@@ -40,17 +39,6 @@ INCLUDE= "$(MYSANDBOX)"
 OPENGLIBS= -lfb_tiny
 MATHLIB= -lm
 
-
-
-
-
-
-# todo: put source file in ./src
-# and .o in ./build
-# make .h real header files, and move the code to .c
-
-
-
 # Commande pour la visualisation
 # -> utilise le Makefile par défaut de Basilisk
 #  CFLAGS='-I/home/jacqhugo/Debut_these/basilisk_sandbox/ -DDISPLAY=-1 -disable-dimensions' make -f ~/Debut_these/basilisk/src/Makefile.defs ml_breaking.tst
@@ -62,23 +50,21 @@ $(EXEC)/$(PARAM): $(PARAM)
 	@cp $(PARAM)  $(EXEC)/$(PARAM)
 	
 
-$(TARGET): $(SRC_DIR)/$(SRC) $(SRC_DIR)/$(DEPS)
+$(TARGET): $(SRC) $(DEPS)
 	$(info COMPILING THE FILE $(EXEC).c:)
 	@mkdir -p $(EXEC)
-	$(CC) -I$(INCLUDE) $(CFLAGS) $(EVENTS) -o $(TARGET) $(SRC_DIR)/$(SRC) $(LIBGL) $(OPENGLIBS) $(MATHLIB)
-	@chmod +x $(EXEC)/$(EXEC)
+	$(CC) -I$(INCLUDE) $(CFLAGS) $(EVENTS) -o $(TARGET) $(SRC) $(LIBGL) $(OPENGLIBS) $(MATHLIB)
 
-$(TARGET_MPI): $(SRC_DIR)/$(SRC) $(SRC_DIR)/$(DEPS)
+$(TARGET_MPI): $(SRC) $(DEPS)
 		$(info COMPILING THE FILE $(EXEC).c FOR MPI:)
 	@mkdir -p $(EXEC)
-	CC99='$(MPICC) $(MPICCFLAGS)' $(CC) -I$(INCLUDE) $(CFLAGS_MPI) $(EVENTS) -o $(TARGET_MPI) $(SRC_DIR)/$(SRC) $(LIBGL) $(OPENGLIBS) $(MATHLIB)
-	@chmod +x $(EXEC)/$(EXEC)
+	CC99='$(MPICC) $(MPICCFLAGS)' $(CC) -I$(INCLUDE) $(CFLAGS_MPI) $(EVENTS) -o $(TARGET_MPI) $(SRC) $(LIBGL) $(OPENGLIBS) $(MATHLIB)
 
-$(TARGET_HPC): $(SRC_DIR)/$(SRC) $(SRC_DIR)/$(DEPS)
+$(TARGET_HPC): $(SRC) $(DEPS)
 		$(info COMPILING THE FILE $(EXEC).c FOR HPC:)
 	@mkdir -p $(EXEC)
-	$(CC) -I$(INCLUDE) $(CFLAGS_HPC) $(EVENTS) $(SRC_DIR)/$(SRC) -o $(TARGET_HPC)  $(LIBGL) $(OPENGLIBS) $(MATHLIB)
-	#mv _$(EXEC).c $(TARGET_HPC)
+	$(CC) -I$(INCLUDE) $(CFLAGS_HPC) $(EVENTS) $(SRC) -o $(TARGET_HPC)  $(LIBGL) $(OPENGLIBS) $(MATHLIB)
+	mv _$(EXEC).c $(TARGET_HPC)
 
 hpc: $(TARGET_HPC)
 
