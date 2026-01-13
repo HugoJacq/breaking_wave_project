@@ -194,7 +194,7 @@ double wave(double x, double y, int N_grid, T_Spectrum spec) {
   int N_mode = spec.N_mode;
   for (int i = 0; i < N_mode; i++) {
     for (int j = 0; j < N_mode + 1; j++) {
-      index = i * N_mode + j;
+      index = j * N_mode + i;
       ampl = sqrt(2. * spec.F_kxky[index] * dkx * dky);
       a = (spec.kx[i] * x + spec.ky[j] * y + spec.phase[index]);
       eta += ampl * cos(a);

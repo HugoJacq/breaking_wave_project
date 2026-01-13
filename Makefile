@@ -5,9 +5,22 @@
 #
 #
 
-
+# RUN
 EXEC=ml_breaking
 OUT_DIR=out
+
+# TARGETS
+TARGET = $(EXEC)/$(EXEC)
+TARGET_MPI = $(EXEC)/$(EXEC)_mpi
+TARGET_HPC = $(EXEC)/_$(EXEC).c
+F_RESTART = $(EXEC)_restart/
+
+# SOURCES
+DEPS= *.h
+PARAMETERS = namelist
+PARAM= $(PARAMETERS).toml
+SRC_DIR=src
+SRC = $(EXEC).c 
 
 
 # C Compiler options
@@ -21,72 +34,51 @@ LDFLAGS = -lgfortran -L${BASILISK}/ppr -lppr -lm
 CFLAGS_MPI = -autolink -disable-dimensions -g -Wall -pipe -D_FORTIFY_SOURCE=2 -D_MPI=1
 CFLAGS_HPC = $(CFLAGS_MPI) -source
 
-
-# todo: put source file in ./src
-# and .o in ./build
-# make .h real heard files, and move the code to .c
-
-
-# save
-# CFLAGS= -autolink -disable-dimensions -g -Wall -pipe -D_FORTIFY_SOURCE=2 -fopenmp
-# CFLAGS= -autolink -disable-dimensions -g -Wall -pipe -D_FORTIFY_SOURCE=2 -fopenmp -DDISPLAY=-1
-
-
-
-# CFLAGS="-autolink -disable-dimensions -grid=multigrid -g -Wall -pipe -D_FORTIFY_SOURCE=2 -O2 -fopenmp"
-# CFLAGS= -autolink -grid=multigrid -g -Wall -pipe -D_FORTIFY_SOURCE=2 -O2 -fopenmp
-# CFLAGS= -autolink -g -Wall -pipe -D_FORTIFY_SOURCE=2 -O2 -fopenmp
-
-
-#CFLAGS_MPI = -autolink -disable-dimensions -g -Wall -pipe -D_FORTIFY_SOURCE=2 -D_MPI=1
-
-
-# HPC
-# CFLAGS_HPC = -autolink -disable-dimensions -g -Wall -pipe -D_FORTIFY_SOURCE=2 -source -D_MPI=1
-
+# QCC options
 LIBGL= -L$(BASILISK)/gl -lglutils
 INCLUDE= "$(MYSANDBOX)"
 OPENGLIBS= -lfb_tiny
 MATHLIB= -lm
-DEPS= spectrum.h interpolate.h
-PARAMETERS = namelist
-PARAM= $(PARAMETERS).toml
-SRC := $(EXEC).c 
 
-TARGET = $(EXEC)/$(EXEC)
-TARGET_MPI = $(EXEC)/$(EXEC)_mpi
-TARGET_HPC = $(EXEC)/_$(EXEC).c
-F_RESTART = $(EXEC)_restart/
+
+
+
+
+
+# todo: put source file in ./src
+# and .o in ./build
+# make .h real header files, and move the code to .c
+
 
 
 # Commande pour la visualisation
 # -> utilise le Makefile par défaut de Basilisk
 #  CFLAGS='-I/home/jacqhugo/Debut_these/basilisk_sandbox/ -DDISPLAY=-1 -disable-dimensions' make -f ~/Debut_these/basilisk/src/Makefile.defs ml_breaking.tst
 
-all: $(TARGET) $(EXEC)/$(PARAM)
+all: $(TARGET_MPI) $(EXEC)/$(PARAM)
 
 $(EXEC)/$(PARAM): $(PARAM)
 	$(info NAMLIST UPDATED !)
 	@cp $(PARAM)  $(EXEC)/$(PARAM)
 	
 
-$(TARGET): $(SRC) $(DEPS)
+$(TARGET): $(SRC_DIR)/$(SRC) $(SRC_DIR)/$(DEPS)
 	$(info COMPILING THE FILE $(EXEC).c:)
 	@mkdir -p $(EXEC)
-	$(CC) -I$(INCLUDE) $(CFLAGS) $(EVENTS) -o $(TARGET) $(SRC) $(LIBGL) $(OPENGLIBS) $(MATHLIB)
+	$(CC) -I$(INCLUDE) $(CFLAGS) $(EVENTS) -o $(TARGET) $(SRC_DIR)/$(SRC) $(LIBGL) $(OPENGLIBS) $(MATHLIB)
 	@chmod +x $(EXEC)/$(EXEC)
 
-$(TARGET_MPI): $(SRC) $(DEPS)
+$(TARGET_MPI): $(SRC_DIR)/$(SRC) $(SRC_DIR)/$(DEPS)
 		$(info COMPILING THE FILE $(EXEC).c FOR MPI:)
 	@mkdir -p $(EXEC)
-	CC99='$(MPICC) $(MPICCFLAGS)' $(CC) -I$(INCLUDE) $(CFLAGS_MPI) $(EVENTS) -o $(TARGET_MPI) $(SRC) $(LIBGL) $(OPENGLIBS) $(MATHLIB)
+	CC99='$(MPICC) $(MPICCFLAGS)' $(CC) -I$(INCLUDE) $(CFLAGS_MPI) $(EVENTS) -o $(TARGET_MPI) $(SRC_DIR)/$(SRC) $(LIBGL) $(OPENGLIBS) $(MATHLIB)
 	@chmod +x $(EXEC)/$(EXEC)
 
-$(TARGET_HPC): $(SRC) $(DEPS)
+$(TARGET_HPC): $(SRC_DIR)/$(SRC) $(SRC_DIR)/$(DEPS)
 		$(info COMPILING THE FILE $(EXEC).c FOR HPC:)
 	@mkdir -p $(EXEC)
-	$(CC) -I$(INCLUDE) $(CFLAGS_HPC) $(EVENTS) -o $(TARGET_HPC) $(SRC) $(LIBGL) $(OPENGLIBS) $(MATHLIB)
-	mv _$(EXEC).c $(TARGET_HPC)
+	$(CC) -I$(INCLUDE) $(CFLAGS_HPC) $(EVENTS) $(SRC_DIR)/$(SRC) -o $(TARGET_HPC)  $(LIBGL) $(OPENGLIBS) $(MATHLIB)
+	#mv _$(EXEC).c $(TARGET_HPC)
 
 hpc: $(TARGET_HPC)
 
@@ -105,7 +97,7 @@ run: $(TARGET_MPI) $(EXEC)/$(PARAM)
 	(cd $(EXEC); \
 		mpirun -n 16 $(EXEC)_mpi 2>&1 | /usr/bin/tee runlog; \
 		mkdir -p $(OUT_DIR); \
-		mv runlog out.nc u_profile.dat out ;\
+		mv runlog *.nc *.dat out ;\
 		)
 
 plot:

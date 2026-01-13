@@ -27,6 +27,7 @@ HOW TO CREATE A RESTART
   with N = index of timestep in the file "out.nc"
 */
 
+
 #include "grid/multigrid.h"
 #include "layered/hydro.h"
 #include "layered/nh.h"
@@ -89,10 +90,11 @@ double thetaH = 0.5;        // theta_h for dumping fast barotropic modes
 // diag
 //double *dudz, *eps, *u_profile;
 double *u_profile;
+double dt_mean = 0.1;
 static FILE * fp;
 
 
-
+int rank ,msize; // mpi
 
 // void my_gradzl(scalar * s, vector * v){
 //   // Gradient in multilayer
@@ -123,7 +125,12 @@ static FILE * fp;
 
 int main(int argc, char *argv[])  
 {
-
+   
+  
+  #if _MPI
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &msize);
+  #endif
   // Building a 'params' array with all parameters from the namlist
   params = array_new();
   add_param("P", &P, "double");
@@ -180,29 +187,39 @@ event init(i =  0) {
   // TO DO
   geometric_beta (1./3., true); // Varying layer thickness
   if (restart!=1) {
-  // Generate linealy spaced kx, ky according to specified # of modes, and
-  //  interpolated F(kx,ky)
+    // Generate linealy spaced kx, ky according to specified # of modes, and
+    //  interpolated F(kx,ky)
     T_Spectrum spectrum;
     if (F_shape==1){
       spectrum = spectrum_gen_linear(N_mode, N_power, L, P, kp);
     }
     else{
-      spectrum = read_spectrum("init_spectrum", N_mode);
+      spectrum = read_spectrum("init_spectrum", N_mode); // TO DO: 
     }
+
+    // step 1: set eta and h
     foreach() {
       zb[] = -h0;
       eta[] = wave(x, y, N_grid, spectrum);
       double H = wave(x, y, N_grid, spectrum) - zb[];
+      foreach_layer() {
+        h[] = H/nl;
+      } 
+    }
+    
+    // step 2: remap
+    vertical_remapping (h, tracers);
+    // step 3: set currents
+    foreach() {
       double z = zb[];
       foreach_layer() {
-        h[] = H*beta[point.l];
         z += h[]/2.;
         u.x[] = u_x(x, y, z, N_grid, spectrum);
         u.y[] = u_y(x, y, z, N_grid, spectrum);
         w[] = u_z(x, y, z, N_grid, spectrum);
         z += h[]/2.;
-        } 
       }
+    }
   }
   else {
     //fprintf(stderr, "restart = %d\n",restart);
@@ -214,6 +231,7 @@ event init(i =  0) {
     // read_nc({zb, h, u, w}, file_restart);
     //
   }
+
 
   fprintf (stderr,"Done initialization!\n");
   // sprintf(fileout, "%0*d.nc", pad, 0); // add the padding
@@ -231,28 +249,70 @@ event compute_horizontal_avg (i++; t<=tend+1e-10){
   // fprintf(stderr, "dt %f\n",dt);
   foreach(reduction(+:u_profile[:nl])){
     foreach_layer(){
+      // if (point.l==29) {
+      //   if (u.x[0,0,_layer])
+      //   fprintf(stderr, "t %f, i %d, value %f\n", t, i,  u.x[0,0,_layer] / (N*N) * dt / 1.0);
+      // }
+      u_profile[point.l] += u.x[] / (N*N) * dt / dt_mean;
 
-      // fprintf(stderr, "t %f, i %d, value %f\n", t, i,  u.x[0,0,_layer] / (N*N) * dt / 1.0);
-      u_profile[point.l] += u.x[] / (N*N) * dt / 1.0;
     }
   }
   //fprintf(stderr, "t %f, i %d, value %f\n", t, i,  u_profile[nl-2]);
 
 }
-event write_diag(t=0., t+=1.){
+event write_diag(t=0., t+=dt_mean){
   // Todo: make this compatible with mpi, check pid of cpu.
-  {
-  fp  = fopen("u_profile.dat","a");
-  // fprintf(fp, "%f ",t);
-  for (int i=0; i<nl; ++i) {
-    fprintf (fp, "%f %d %g\n", t, i, u_profile[i]);
-    u_profile[i] = 0.;
-  }
-  fprintf(fp,"\n");
-  fclose(fp);
+     fp  = fopen("u_profile.dat","a");
+    if (fp == NULL){
+      fprintf(stderr, "Error opening file u_profile.dat");
+      return 2;
+    }
+    // fprintf(fp, "%f ",t);
+    for (int i=0; i<nl; ++i) {
+      fprintf (fp, "%f %d %g\n", t, i, u_profile[i]);
+      u_profile[i] = 0.0;
+      // fprintf(stderr, "%f %d %g\n", t, i, u_profile[i]);
+    }
+    fprintf(fp,"\n");
+    fclose(fp);
+
+// 7/01/26
+// j'ai corrigé une erreur d'indice dans l'ini de eta
+// mais 
+// le probleme de valeurs extreme dans u_profile est toujorus la
+// et l'output est diff selon que j'utilise openmp ou mpi ...
+// todo: compare les fichiers out.nc pour voir ci ca c'est pareil
+//
+
+
+  //   if (rank==0) {
+  //     fp  = fopen("u_profile.dat","a");
+  //     // fprintf(fp, "%f ",t);
+  //     for (int i=0; i<nl; ++i) {
+  //       fprintf (fp, "%f %d %g\n", t, i, u_profile[i]);
+  //       // fprintf(stderr, "%f %d %g\n", t, i, u_profile[i]);
+  //     //u_profile[i] = 0.;
+  //     }
+  //     fprintf(fp,"\n");
+  //     fclose(fp);
+  //   }
+  // for (int i = 0; i < nl; ++i)
+  //   u_profile[i] = 0.0;
+  // #else
+  //   fp  = fopen("u_profile.dat","a");
+  //   // fprintf(fp, "%f ",t);
+  //   for (int i=0; i<nl; ++i) {
+  //     fprintf (fp, "%f %d %g\n", t, i, u_profile[i]);
+  //     // fprintf(stderr, "%f %d %g\n", t, i, u_profile[i]);
+  //     u_profile[i] = 0.;
+  //   }
+  //   fprintf(fp,"\n");
+  //   fclose(fp);
+  // #endif
+
   
 
-  }
+  
 }
   // vector gradU[];
   // vector gradV[];
