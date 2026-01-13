@@ -29,7 +29,7 @@ CFLAGS= -autolink -disable-dimensions -g -Wall -pipe -D_FORTIFY_SOURCE=2 -fopenm
 
 # MPI compiler
 MPICC=mpicc
-MPICCFLAGS += -std=c99 -02 -g -Wall
+MPICCFLAGS += -std=c99 -O2 -g -Wall
 LDFLAGS = -lgfortran -L${BASILISK}/ppr -lppr -lm
 CFLAGS_MPI = -autolink -disable-dimensions -g -Wall -pipe -D_FORTIFY_SOURCE=2 -D_MPI=1
 CFLAGS_HPC = $(CFLAGS_MPI) -source

@@ -127,10 +127,10 @@ int main(int argc, char *argv[])
 {
    
   
-  #if _MPI
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &msize);
-  #endif
+  // #if _MPI
+  //   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  //   MPI_Comm_size(MPI_COMM_WORLD, &msize);
+  // #endif
   // Building a 'params' array with all parameters from the namlist
   params = array_new();
   add_param("P", &P, "double");
@@ -262,20 +262,25 @@ event compute_horizontal_avg (i++; t<=tend+1e-10){
 }
 event write_diag(t=0., t+=dt_mean){
   // Todo: make this compatible with mpi, check pid of cpu.
-     fp  = fopen("u_profile.dat","a");
-    if (fp == NULL){
-      fprintf(stderr, "Error opening file u_profile.dat");
-      return 2;
+    if (pid()==0) {
+      fp  = fopen("u_profile.dat","a");
+      if (fp == NULL){
+        fprintf(stderr, "Error opening file u_profile.dat");
+        return 2;
+      }
+      // fprintf(fp, "%f ",t);
+      for (int i=0; i<nl; ++i) {
+        fprintf (fp, "%f %d %g\n", t, i, u_profile[i]);
+              // fprintf(stderr, "%f %d %g\n", t, i, u_profile[i]);
+      }
+      fprintf(fp,"\n");
+      fclose(fp);
     }
-    // fprintf(fp, "%f ",t);
     for (int i=0; i<nl; ++i) {
-      fprintf (fp, "%f %d %g\n", t, i, u_profile[i]);
       u_profile[i] = 0.0;
-      // fprintf(stderr, "%f %d %g\n", t, i, u_profile[i]);
     }
-    fprintf(fp,"\n");
-    fclose(fp);
 
+  
 // 7/01/26
 // j'ai corrigé une erreur d'indice dans l'ini de eta
 // mais 
