@@ -58,7 +58,7 @@ $(TARGET): $(SRC) $(DEPS)
 $(TARGET_MPI): $(SRC) $(DEPS)
 		$(info COMPILING THE FILE $(EXEC).c FOR MPI:)
 	@mkdir -p $(EXEC)
-	CC99='$(MPICC) $(MPICCFLAGS)' $(CC) -I$(INCLUDE) $(CFLAGS_MPI) $(EVENTS) -o $(TARGET_MPI) $(SRC) $(LIBGL) $(OPENGLIBS) $(MATHLIB)
+	CC99='$(MPICC) $(MPICCFLAGS)' $(CC)  -I$(INCLUDE) $(CFLAGS_MPI) $(EVENTS) -o $(TARGET_MPI) $(SRC) $(LIBGL) $(OPENGLIBS) $(MATHLIB)
 
 $(TARGET_HPC): $(SRC) $(DEPS)
 		$(info COMPILING THE FILE $(EXEC).c FOR HPC:)
@@ -84,6 +84,12 @@ clean:
 run: $(TARGET_MPI) $(EXEC)/$(PARAM)
 	(cd $(EXEC); \
 		mpirun -n 16 $(EXEC)_mpi 2>&1 | /usr/bin/tee runlog; \
+		mkdir -p $(OUT_DIR); \
+		mv runlog *.nc *.dat out ;\
+		)
+run_openmp: $(TARGET) $(EXEC)/$(PARAM)
+	(cd $(EXEC); \
+		./$(EXEC) 2>&1 | /usr/bin/tee runlog; \
 		mkdir -p $(OUT_DIR); \
 		mv runlog *.nc *.dat out ;\
 		)

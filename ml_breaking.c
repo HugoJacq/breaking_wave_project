@@ -90,7 +90,10 @@ double thetaH = 0.5;        // theta_h for dumping fast barotropic modes
 // diag
 //double *dudz, *eps, *u_profile;
 double *u_profile;
-double dt_mean = 0.1;
+double dt_mean = 0.4;
+double U=0.0;
+int l;
+
 static FILE * fp;
 
 
@@ -176,15 +179,16 @@ int main(int argc, char *argv[])
   // dudz = (double*)malloc(nl * sizeof(double));
   // eps = (double*)malloc(nl * sizeof(double));
   u_profile = (double*)calloc(nl, sizeof(double));
+  l=nl-1;
+  fprintf(stderr, "u%d ini = %f\n",l, U);
   fp  = fopen("u_profile.dat","w"); // reset file
   fclose(fp);
-
+  
   fprintf (stderr, "Read in parameters!\n");
   run();
 }
 
 event init(i =  0) {
-  // TO DO
   geometric_beta (1./3., true); // Varying layer thickness
   if (restart!=1) {
     // Generate linealy spaced kx, ky according to specified # of modes, and
@@ -236,17 +240,33 @@ event init(i =  0) {
   fprintf (stderr,"Done initialization!\n");
   // sprintf(fileout, "%0*d.nc", pad, 0); // add the padding
   create_nc({zb, h, u, w, eta}, file_out);
-  //write_nc(); 
+
 }
 
 
 // event film surface
 
 
+// event images (t += dtout) {
+//   scalar img[];
+//   foreach()
+//     img[] = u.x[0,0,l];
+//   static FILE * fp = fopen ("grid.ppm", "w");
+//
+//   output_ppm (img, fp, min = -2, max = 2);
+// }
+//
+// event dumpini (t=0.){
+//   dump();
+// }
 
 
+//event compute_horizontal_avg (i=0; i++; t<=tend+1e-10){
 event compute_horizontal_avg (i++; t<=tend+1e-10){
+
   // fprintf(stderr, "dt %f\n",dt);
+  
+  #if 1
   foreach(reduction(+:u_profile[:nl])){
     foreach_layer(){
       // if (point.l==29) {
@@ -257,21 +277,28 @@ event compute_horizontal_avg (i++; t<=tend+1e-10){
 
     }
   }
+  #else
+  fprintf(stderr, "u%d pre avg = %f\n",l, U);
+    foreach(reduction(+:U)){
+      U += u.x[0,0,l] / (N*N) * dt / dt_mean;
+    }
+  fprintf(stderr, "   t=%f u%d= %f\n",t, l, U);
+  #endif
   //fprintf(stderr, "t %f, i %d, value %f\n", t, i,  u_profile[nl-2]);
 
 }
+//event write_diag(t=dt_mean, t+=dt_mean){
 event write_diag(t=0., t+=dt_mean){
   // Todo: make this compatible with mpi, check pid of cpu.
+    #if 1
     if (pid()==0) {
       fp  = fopen("u_profile.dat","a");
       if (fp == NULL){
         fprintf(stderr, "Error opening file u_profile.dat");
         return 2;
       }
-      // fprintf(fp, "%f ",t);
       for (int i=0; i<nl; ++i) {
         fprintf (fp, "%f %d %g\n", t, i, u_profile[i]);
-              // fprintf(stderr, "%f %d %g\n", t, i, u_profile[i]);
       }
       fprintf(fp,"\n");
       fclose(fp);
@@ -279,6 +306,24 @@ event write_diag(t=0., t+=dt_mean){
     for (int i=0; i<nl; ++i) {
       u_profile[i] = 0.0;
     }
+    #else
+    if (pid()==0) {
+      fp  = fopen("u_profile.dat","a");
+      if (fp == NULL){
+        fprintf(stderr, "Error opening file u_profile.dat");
+        return 2;
+      }
+      fprintf (fp, "%f %d %g\n", t, l, U);
+     
+      //fprintf(fp,"\n");
+      fclose(fp);
+    }
+    fprintf(stderr, "writing   t=%f u%d= %f\n",t, l, U);
+    U=0.0;
+
+    #endif
+
+
 
   
 // 7/01/26
@@ -396,8 +441,9 @@ event write_diag(t=0., t+=dt_mean){
 //}
 
 
+//event output(t = 0.; t<= tend+1e-10; t+=dtout){
 event output(t = 0.; t<= tend+1e-10; t+=dtout){
-  fprintf(stdout, "output at t=%f, i=%d\n", t, i);
+  //fprintf(stdout, "output at t=%f, i=%d\n", t, i);
   write_nc();
 }
 
