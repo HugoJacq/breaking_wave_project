@@ -6,10 +6,19 @@ No stratification
 
 USAGE
 
-  * Compilation and run
+  * Compilation and run (with mpirun)
   make
 
- 
+  * HPC source file generation
+  make hpc
+
+  * Running on HPC
+
+  -> first compile on hpc with
+  mpicc -std=c99 -O2 _*.c
+
+  -> then run (in a slurm file)
+  srun ./ml_breaking
 
 
 HOW TO CREATE A RESTART

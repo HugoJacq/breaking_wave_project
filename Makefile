@@ -17,8 +17,10 @@ ml_breaking/namelist.toml: namelist.toml
 	mkdir -p ml_breaking
 	ln -sf --target-directory=ml_breaking ../namelist.toml
 
+_ml_breaking.c: CFLAGS += -D_MPI=1
 
-all: ml_breaking.tst #plot
+hpc: _ml_breaking.c
+
 
 plot: ml_breaking/plots
 
