@@ -6,19 +6,10 @@ No stratification
 
 USAGE
 
-  * Compilation:
+  * Compilation and run
   make
 
-  * running:
-    make run
-  or
-    ./ml_breaking config_name
-
-  * restart:
-    make restart
-    then edit the .toml config file in yourfolder_restart/
-
-  -> if config_name is not given, the default is "namlist.toml"
+ 
 
 
 HOW TO CREATE A RESTART
@@ -36,7 +27,7 @@ HOW TO CREATE A RESTART
 // #include "layered/perfs.h"
 #include "bderembl/libs/extra.h"      // parameters from namlist
 //#include "bderembl/libs/netcdf_bas.h" // read/write netcdf files
-#include "netcdf_bas.h"
+#include "bderembl/libs/netcdf_bas.h"
 //#include "view.h" // Basilisk visualization
 // #include "display.h"
 #define g_ 9.81
@@ -260,37 +251,17 @@ event init(i =  0) {
 //   dump();
 // }
 
-
-//event compute_horizontal_avg (i=0; i++; t<=tend+1e-10){
+// This event compute layer average of u.x
 event compute_horizontal_avg (i++; t<=tend+1e-10){
-
-  // fprintf(stderr, "dt %f\n",dt);
-  
-  #if 1
-  foreach(reduction(+:u_profile[:nl])){
+  foreach(reduction(+:u_profile[:nl]))
     foreach_layer(){
-      // if (point.l==29) {
-      //   if (u.x[0,0,_layer])
-      //   fprintf(stderr, "t %f, i %d, value %f\n", t, i,  u.x[0,0,_layer] / (N*N) * dt / 1.0);
-      // }
       u_profile[point.l] += u.x[] / (N*N) * dt / dt_mean;
-
     }
-  }
-  #else
-  fprintf(stderr, "u%d pre avg = %f\n",l, U);
-    foreach(reduction(+:U)){
-      U += u.x[0,0,l] / (N*N) * dt / dt_mean;
-    }
-  fprintf(stderr, "   t=%f u%d= %f\n",t, l, U);
-  #endif
-  //fprintf(stderr, "t %f, i %d, value %f\n", t, i,  u_profile[nl-2]);
-
 }
-//event write_diag(t=dt_mean, t+=dt_mean){
+
+// This even writes to a file the layer average
 event write_diag(t=0., t+=dt_mean){
-  // Todo: make this compatible with mpi, check pid of cpu.
-    #if 1
+    // main worker is writing the file
     if (pid()==0) {
       fp  = fopen("u_profile.dat","a");
       if (fp == NULL){
@@ -303,66 +274,12 @@ event write_diag(t=0., t+=dt_mean){
       fprintf(fp,"\n");
       fclose(fp);
     }
+    // Reset the profile for all workers
     for (int i=0; i<nl; ++i) {
       u_profile[i] = 0.0;
     }
-    #else
-    if (pid()==0) {
-      fp  = fopen("u_profile.dat","a");
-      if (fp == NULL){
-        fprintf(stderr, "Error opening file u_profile.dat");
-        return 2;
-      }
-      fprintf (fp, "%f %d %g\n", t, l, U);
-     
-      //fprintf(fp,"\n");
-      fclose(fp);
-    }
-    fprintf(stderr, "writing   t=%f u%d= %f\n",t, l, U);
-    U=0.0;
-
-    #endif
 
 
-
-  
-// 7/01/26
-// j'ai corrigé une erreur d'indice dans l'ini de eta
-// mais 
-// le probleme de valeurs extreme dans u_profile est toujorus la
-// et l'output est diff selon que j'utilise openmp ou mpi ...
-// todo: compare les fichiers out.nc pour voir ci ca c'est pareil
-//
-
-
-  //   if (rank==0) {
-  //     fp  = fopen("u_profile.dat","a");
-  //     // fprintf(fp, "%f ",t);
-  //     for (int i=0; i<nl; ++i) {
-  //       fprintf (fp, "%f %d %g\n", t, i, u_profile[i]);
-  //       // fprintf(stderr, "%f %d %g\n", t, i, u_profile[i]);
-  //     //u_profile[i] = 0.;
-  //     }
-  //     fprintf(fp,"\n");
-  //     fclose(fp);
-  //   }
-  // for (int i = 0; i < nl; ++i)
-  //   u_profile[i] = 0.0;
-  // #else
-  //   fp  = fopen("u_profile.dat","a");
-  //   // fprintf(fp, "%f ",t);
-  //   for (int i=0; i<nl; ++i) {
-  //     fprintf (fp, "%f %d %g\n", t, i, u_profile[i]);
-  //     // fprintf(stderr, "%f %d %g\n", t, i, u_profile[i]);
-  //     u_profile[i] = 0.;
-  //   }
-  //   fprintf(fp,"\n");
-  //   fclose(fp);
-  // #endif
-
-  
-
-  
 }
   // vector gradU[];
   // vector gradV[];
@@ -440,21 +357,31 @@ event write_diag(t=0., t+=dt_mean){
 
 //}
 
-
-//event output(t = 0.; t<= tend+1e-10; t+=dtout){
+// Writing a 4D netcdf file
 event output(t = 0.; t<= tend+1e-10; t+=dtout){
-  //fprintf(stdout, "output at t=%f, i=%d\n", t, i);
   write_nc();
 }
 
+// Clean for my diag of layer avg
 event cleanup(t=end){
   free(u_profile);
 }
-//
-// event end (t = tend) {
-//   fprintf (stderr,"tend = %f \n", tend);
-//   // create_nc({zb, h, u, w}, "end.nc");
-//   write_nc();
-//   // To Fix 31/10/25: This output is filled with nan. 
-//
-// }
+
+/**
+Results: plots
+~~~gnuplot 
+# Plot the heatmap
+set pm3d map
+set view map
+set xlabel "Time (s)"
+set ylabel "Layer"
+set cblabel "Value"
+set yrange [0:15]
+set terminal pngcairo size 800,600 enhanced font 'Verdana,12'
+set output 'u_profile.png'
+set size 0.9, 0.9
+splot "u_profile.dat" using 1:2:3 with pm3d
+unset output
+~~~
+**/
+

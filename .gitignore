@@ -15,3 +15,12 @@ multilayer_py/data_Jiarong/
 output_N8_P0.1/
 Makefile.bak
 MWE_openmp_vs_mpi/
+
+ml_breaking_save2/
+
+*.deps
+*.old
+*.tests
+*.s
+*.d
+*.tst

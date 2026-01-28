@@ -1,117 +1,27 @@
-##
-#
-# This make is used to compile and run a Basilisk simulation
-#
-#
-#
+CFLAGS += -O1 # O2
 
-# RUN
-EXEC=ml_breaking
-OUT_DIR=out
+# for local use only
+ifdef MYSANDBOX
+CFLAGS += -I$(MYSANDBOX)/
+endif
 
-# TARGETS
-TARGET = $(EXEC)/$(EXEC)
-TARGET_MPI = $(EXEC)/$(EXEC)_mpi
-TARGET_HPC = $(EXEC)/_$(EXEC).c
-F_RESTART = $(EXEC)_restart/
+CFLAGS += -disable-dimensions # skip dimensions check for now
 
-# SOURCES
-DEPS= $(wildcard *.h)
-PARAMETERS = namelist
-PARAM= $(PARAMETERS).toml
-SRC = $(EXEC).c 
+all: ml_breaking/namelist.toml ml_breaking.tst plot
+
+plot: ml_breaking/plots
+
+ml_breaking.tst: CC = mpicc -D_MPI=16
+
+ml_breaking/namelist.toml: namelist.toml
+	mkdir -p ml_breaking
+	ln -sf --target-directory=ml_breaking ../namelist.toml
 
 
-# C Compiler options
-CC=$(BASILISK)/qcc
-CFLAGS= -autolink -disable-dimensions -g -Wall -pipe -D_FORTIFY_SOURCE=2 -fopenmp
+all: ml_breaking.tst #plot
 
-# MPI compiler
-MPICC=mpicc
-MPICCFLAGS += -std=c99 -O2 -g -Wall
-LDFLAGS = -lgfortran -L${BASILISK}/ppr -lppr -lm
-CFLAGS_MPI = -autolink -disable-dimensions -g -Wall -pipe -D_FORTIFY_SOURCE=2 -D_MPI=1
-CFLAGS_HPC = $(CFLAGS_MPI) -source
-
-# QCC options
-LIBGL= -L$(BASILISK)/gl -lglutils
-INCLUDE= "$(MYSANDBOX)"
-OPENGLIBS= -lfb_tiny
-MATHLIB= -lm
-
-# Commande pour la visualisation
-# -> utilise le Makefile par défaut de Basilisk
-#  CFLAGS='-I/home/jacqhugo/Debut_these/basilisk_sandbox/ -DDISPLAY=-1 -disable-dimensions' make -f ~/Debut_these/basilisk/src/Makefile.defs ml_breaking.tst
-
-all: $(TARGET_MPI) $(EXEC)/$(PARAM)
-
-$(EXEC)/$(PARAM): $(PARAM)
-	$(info NAMLIST UPDATED !)
-	@cp $(PARAM)  $(EXEC)/$(PARAM)
-	
-
-$(TARGET): $(SRC) $(DEPS)
-	$(info COMPILING THE FILE $(EXEC).c:)
-	@mkdir -p $(EXEC)
-	$(CC) -I$(INCLUDE) $(CFLAGS) $(EVENTS) -o $(TARGET) $(SRC) $(LIBGL) $(OPENGLIBS) $(MATHLIB)
-
-$(TARGET_MPI): $(SRC) $(DEPS)
-		$(info COMPILING THE FILE $(EXEC).c FOR MPI:)
-	@mkdir -p $(EXEC)
-	CC99='$(MPICC) $(MPICCFLAGS)' $(CC)  -I$(INCLUDE) $(CFLAGS_MPI) $(EVENTS) -o $(TARGET_MPI) $(SRC) $(LIBGL) $(OPENGLIBS) $(MATHLIB)
-
-$(TARGET_HPC): $(SRC) $(DEPS)
-		$(info COMPILING THE FILE $(EXEC).c FOR HPC:)
-	@mkdir -p $(EXEC)
-	$(CC) -I$(INCLUDE) $(CFLAGS_HPC) $(EVENTS) $(SRC) -o $(TARGET_HPC)  $(LIBGL) $(OPENGLIBS) $(MATHLIB)
-	mv _$(EXEC).c $(TARGET_HPC)
-
-hpc: $(TARGET_HPC)
-
-mpi: $(TARGET_MPI)
-
-openmp: $(TARGET)
-
-save:
-	$(info SAVING THE FOLDER)
-	@cp -r $(EXEC) "$(EXEC)_save"
-
-clean:
-	rm -fr $(EXEC)
-	rm -f *.nc runlog
+plot: ml_breaking/plots
 
 
-run: $(TARGET_MPI) $(EXEC)/$(PARAM)
-	(cd $(EXEC); \
-		mpirun -n 16 $(EXEC)_mpi 2>&1 | /usr/bin/tee runlog; \
-		mkdir -p $(OUT_DIR); \
-		mv runlog *.nc *.dat out ;\
-		)
-run_openmp: $(TARGET) $(EXEC)/$(PARAM)
-	(cd $(EXEC); \
-		./$(EXEC) 2>&1 | /usr/bin/tee runlog; \
-		mkdir -p $(OUT_DIR); \
-		mv runlog *.nc *.dat out ;\
-		)
-
-plot:
-	cp plot.gp $(EXEC)/$(OUT_DIR)/
-	(cd $(EXEC)/$(OUT_DIR); \
-		gnuplot plot.gp; \
-		mv *.png ../;\
-		cd ..)
-
-# restart uses 
-# - ncks (with netcdf)
-# - tomli (https://github.com/blinxen/tomli)
-restart: $(TARGET) 
-	@echo "NO YET CODED"
-	@#mkdir -p $(F_RESTART)
-	@#cp $(TARGET) $(F_RESTART)
-	@#ncks -d time,-1 $(exec)/out.nc $(F_RESTART)/restart.nc
-	@#cp $(exec)/namlist.toml $(F_RESTART)/namlist_prev.toml
-	@#tomli set -f $(F_RESTART)/namlist_prev.toml restart 1 --type int > $(F_RESTART)/namlist.toml
-
-
-
+include $(BASILISK)/Makefile.defs
 
