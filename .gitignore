@@ -1,22 +1,22 @@
-ml_breaking/
-spectrum_jiarong.h
-.*
+
+
+
+# Python things
 multilayer_py/__pycache__/
 multilayer_py/gen_inputs_fields/__pycache__/
 multilayer_py/tools/__pycache__/
 multilayer_py/visualize/__pycache__/
 
-_ml_breaking.c
-ml_breaking_save/
+
+a_first_simu/ml_breaking_save_visu/
+a_first_simu/output_N8_P0.1/
+a_first_simu/_ml_breaking.c
+a_first_simu/ml_breaking/
+
 *.png
 *.svg
 *.pdf
 multilayer_py/data_Jiarong/
-output_N8_P0.1/
-Makefile.bak
-MWE_openmp_vs_mpi/
-
-ml_breaking_save2/
 
 *.deps
 *.old
