@@ -12,6 +12,10 @@ a_first_simu/ml_breaking_save_visu/
 a_first_simu/output_N8_P0.1/
 a_first_simu/_ml_breaking.c
 a_first_simu/ml_breaking/
+a_first_simu/output_N10_P0.02_NaNs/
+
+b_strat_heat_flux/ml_convection.log~
+b_strat_heat_flux/ml_convection/
 
 *.png
 *.svg
@@ -24,3 +28,6 @@ multilayer_py/data_Jiarong/
 *.s
 *.d
 *.tst
+
+a_first_simu/output_N6_P0.02/
+b_strat_heat_flux/todo.md
