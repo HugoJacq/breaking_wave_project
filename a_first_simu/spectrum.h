@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "interpolate.h"
+#include <gsl/gsl_rng.h>
 
 #define PI 3.14159265358979323846
 
@@ -32,10 +33,30 @@ void pol2cart(double rho, double phi, double *x, double *y) {
   *y = rho * sin(phi);
 }
 
-double randInRange(int min, int max)
-{
-  return min + (rand() / (double) (RAND_MAX) * (max - min + 1));
-}
+// double random_gen(gsl_rng * r);
+//   //const gsl_rng_type * T;
+//   //gsl_rng * r;
+//   // gsl_rng_env_setup();
+//   // T = gsl_rng_default;
+//   // r = gsl_rng_alloc (T);
+//   double randout;
+//   randout = gsl_rng_uniform (r);
+//   //gsl_rng_free (r);
+//   printf("random gsl %f\n", randout);
+//   return result;
+
+// double randInRange(double min, double max)
+// {
+//   int RANDN;
+//   RANDN = rand();
+//   printf("rand() %d, RAND_MAX %d, min %f, max %f\n", RANDN, RAND_MAX, min, max);
+//
+//   return min + (RANDN / (double) (RAND_MAX) * (max - min + 1));
+//   //return min + (rand() / (double) (RAND_MAX) * (max - min + 1));
+//
+//
+//
+// }
 
 
 // Some common spectra
@@ -83,6 +104,14 @@ T_Spectrum spectrum_gen_linear(int N_mode, int N_power, double L, double P,
   spectrum.F_kxky = (double *)malloc(N_mode * (N_mode + 1) * sizeof(double));
   spectrum.phase = (double *)malloc(N_mode * (N_mode + 1) * sizeof(double));
   spectrum.omega = (double *)malloc(N_mode * (N_mode + 1) * sizeof(double));
+
+  // Random gene declaration
+  const gsl_rng_type * T;
+  gsl_rng * r;
+  gsl_rng_env_setup();
+  T = gsl_rng_default;
+  r = gsl_rng_alloc (T);
+
 
 
   for (int i = 0; i < N_kmod; ++i) {
@@ -143,14 +172,21 @@ T_Spectrum spectrum_gen_linear(int N_mode, int N_power, double L, double P,
   srand(RANDOM); // We can seed it differently for different runs
   int index = 0;
   double kmod = 0;
+  double randnum;
   for (int i=0; i<N_mode; i++) {
     for (int j=0; j<N_mode+1; j++) {
       index = j*N_mode + i;
       kmod = sqrt(sq(spectrum.kx[i]) + sq(spectrum.ky[j]));
       spectrum.omega[index] = sqrt(g_*kmod);
-      spectrum.phase[index] = randInRange (0, 2.*PI);
+      randnum =  gsl_rng_uniform (r)*2.*PI;
+      spectrum.phase[index] = randnum;
+
+      //spectrum.phase[index] = randInRange (0, 2.*PI);
     }
   }
+
+  // Clear mem of random gen
+  gsl_rng_free (r);
 
   return spectrum;
 }

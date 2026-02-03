@@ -97,7 +97,6 @@ int l;
 static FILE * fp;
 
 
-int rank ,msize; // mpi
 
 // void my_gradzl(scalar * s, vector * v){
 //   // Gradient in multilayer
@@ -183,7 +182,13 @@ int main(int argc, char *argv[])
   fprintf(stderr, "u%d ini = %f\n",l, U);
   fp  = fopen("u_profile.dat","w"); // reset file
   fclose(fp);
+    
+  // Random generator init
   
+
+
+
+
   fprintf (stderr, "Read in parameters!\n");
   run();
 }
