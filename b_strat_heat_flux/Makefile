@@ -1,3 +1,7 @@
+
+NAME=ml_convection
+
+
 CFLAGS += -O1 # O2
 
 # for local use only
@@ -7,22 +11,22 @@ endif
 
 CFLAGS += -disable-dimensions # skip dimensions check for now
 
-all: ml_breaking/namelist.toml ml_breaking.tst plot
+all: $(NAME)/namelist.toml $(NAME).tst plot
 
-plot: ml_breaking/plots
+plot: $(NAME)/plots
 
-ml_breaking.tst: CC = mpicc -D_MPI=16
+$(NAME).tst: CC = mpicc -D_MPI=16
 
-ml_breaking/namelist.toml: namelist.toml
-	mkdir -p ml_breaking
-	ln -sf --target-directory=ml_breaking ../namelist.toml
+$(NAME)/namelist.toml: namelist.toml
+	mkdir -p $(NAME)
+	ln -sf --target-directory=$(NAME) ../namelist.toml
 
-_ml_breaking.c: CFLAGS += -D_MPI=1
+_$(NAME).c: CFLAGS += -D_MPI=1
 
-hpc: _ml_breaking.c
+hpc: _$(NAME).c
 
 
-plot: ml_breaking/plots
+plot: $(NAME)/plots
 
 
 include $(BASILISK)/Makefile.defs

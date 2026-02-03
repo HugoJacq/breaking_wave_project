@@ -18,7 +18,7 @@ USAGE
   mpicc -std=c99 -O2 _*.c
 
   -> then run (in a slurm file)
-  srun ./ml_breaking
+  srun ./ml_convection
 
 
 HOW TO CREATE A RESTART
@@ -40,7 +40,9 @@ HOW TO CREATE A RESTART
 //#include "view.h" // Basilisk visualization
 // #include "display.h"
 #define g_ 9.81
-#include "spectrum.h" // Initial conditions generation
+
+
+
 
 
 /*
@@ -62,16 +64,13 @@ char namlist[80] = "namelist.toml";    // file name of namlist
 char file_out[20] = "out.nc";         // file name of output
 char file_restart[20] = "restart.nc"; // file name of restart
 // -> Initial conditions
-double P = 0.2 [1, -1];     // energy level (estimated so that kpHs is reasonable)
-int coeff_kpL0 = 10 [];     // kpL0 = coeff_kpL0 * pi
-int N_mode = 32 [];         // Number of modes in wavenumber space
-int N_power = 5 [];         // directional spreading coeff
-int F_shape = 0 [];         // shape of the initial spectrum
+double strat = 0.002;       // [s-1] N^2 stratification
+double qt = 100;            // [W] Heat flux
+double Ts = 20;             // [K] Surface temperature (arbitrary)
 // -> Domain definition
 int N_grid = 5 [];       // 2^N_grid : number of x and y gridpoints
 double L = 200.0 [1];       // domain size
 int N_layer = 2 [];         // number of layers
-double kp = PI*10/200.0 [-1];// peak wave number
 double h0 = 1.0 [1];        // depth of water
 // -> Runtime parameters
 int restart = 0;            // 1: restart, 0: no restart
@@ -83,9 +82,15 @@ int nout = 1;               // number of the outfile
 char fileout[100];          // name of outfile
 // -> physical properties
 double nu0 = 0.;            // Viscosity for vertical diffusion
-int RANDOM = 2;             // For random number generator
 double thetaH = 0.5;        // theta_h for dumping fast barotropic modes
 
+
+double rho0 = 1025.     // [kg.m-3] reference density
+double cp = 4.2e3       // [J.kg-1.K-1] heat capacity water
+double betaT = 2e-4;    // Linear equation of state: drho = betaT*(T0-T) (Vallis 2.4)
+#define drho(T) (betaT*(T0-T);
+#define T0(z) (T1 + (T0 - T1)*(z + H0)/H0)
+#include "layered/dr.h"
 
 // diag
 //double *dudz, *eps, *u_profile;
@@ -93,65 +98,24 @@ double *u_profile;
 double dt_mean = 0.4;
 double U=0.0;
 int l;
-
 static FILE * fp;
-
-
-int rank ,msize; // mpi
-
-// void my_gradzl(scalar * s, vector * v){
-//   // Gradient in multilayer
-//   assert (list_len(f) == vectors_len(g));
-//
-//   scalar dsdx, dsdy, dsdzl, dzdzl; // temp var
-//
-//   foreach(){
-//     foreach_layer(){
-//       dsdx[] = (s[1,0] - s[-1,0])/Delta;
-//       dsdy[] = (s[0,1] - s[0,-1])/Delta;
-//       dzdx[] = (h[point.l])
-//       }
-//     }
-//   }
-
-
-
-
-
-
-
-
-
-
 
 
 
 int main(int argc, char *argv[])  
 {
-   
-  
-  // #if _MPI
-  //   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  //   MPI_Comm_size(MPI_COMM_WORLD, &msize);
-  // #endif
+ 
   // Building a 'params' array with all parameters from the namlist
   params = array_new();
-  add_param("P", &P, "double");
-  add_param("coeff_kpL0", &coeff_kpL0, "int");
-  add_param("N_mode", &N_mode, "int");
-  add_param("N_power", &N_power, "int");
-  add_param("F_shape", &F_shape, "int");
   add_param("N_grid", &N_grid, "int");
   add_param("L", &L, "double");
   add_param("N_layer", &N_layer, "int");
   add_param("h0", &h0, "double");
   add_param("tend", &tend, "double");
   add_param("nu0", &nu0, "double");
-  add_param("RANDOM", &RANDOM, "int");
   add_param("thetaH", &thetaH, "double");
   add_param("restart", &restart, "int");
   add_param("dtout", &dtout, "double");
-  kp = PI * coeff_kpL0 / L; // kpL=coeff x pi peak wavelength
   
   // Search for the configuration file with a given path or read params.in
   if (argc == 2)
@@ -191,21 +155,12 @@ int main(int argc, char *argv[])
 event init(i =  0) {
   geometric_beta (1./3., true); // Varying layer thickness
   if (restart!=1) {
-    // Generate linealy spaced kx, ky according to specified # of modes, and
-    //  interpolated F(kx,ky)
-    T_Spectrum spectrum;
-    if (F_shape==1){
-      spectrum = spectrum_gen_linear(N_mode, N_power, L, P, kp);
-    }
-    else{
-      spectrum = read_spectrum("init_spectrum", N_mode); // TO DO: 
-    }
 
     // step 1: set eta and h
     foreach() {
       zb[] = -h0;
-      eta[] = wave(x, y, N_grid, spectrum);
-      double H = wave(x, y, N_grid, spectrum) - zb[];
+      eta[] = 0.;
+      double H = - zb[];
       foreach_layer() {
         h[] = H/nl;
       } 
@@ -215,13 +170,10 @@ event init(i =  0) {
     vertical_remapping (h, tracers);
     // step 3: set currents
     foreach() {
-      double z = zb[];
       foreach_layer() {
-        z += h[]/2.;
-        u.x[] = u_x(x, y, z, N_grid, spectrum);
-        u.y[] = u_y(x, y, z, N_grid, spectrum);
-        w[] = u_z(x, y, z, N_grid, spectrum);
-        z += h[]/2.;
+        u.x[] = 0.;
+        u.y[] = 0.;
+        w[] = 0.;
       }
     }
   }
@@ -238,27 +190,17 @@ event init(i =  0) {
 
 
   fprintf (stderr,"Done initialization!\n");
-  // sprintf(fileout, "%0*d.nc", pad, 0); // add the padding
   create_nc({zb, h, u, w, eta}, file_out);
 
 }
 
+event forcing(i++){
+  // This event adds a heat flux forcing at surface
+  foreach(){
+    T[:,:,nl-1] = dt*(T[:,:,nl-1] + qt/h[:,:,nl-1])
+  }
 
-// event film surface
-
-
-// event images (t += dtout) {
-//   scalar img[];
-//   foreach()
-//     img[] = u.x[0,0,l];
-//   static FILE * fp = fopen ("grid.ppm", "w");
-//
-//   output_ppm (img, fp, min = -2, max = 2);
-// }
-//
-// event dumpini (t=0.){
-//   dump();
-// }
+}
 
 // This event compute layer average of u.x
 event compute_horizontal_avg (i++; t<=tend+1e-10){
@@ -290,81 +232,6 @@ event write_diag(t=0., t+=dt_mean){
 
 
 }
-  // vector gradU[];
-  // vector gradV[];
-  // dudx = u.x[]
-  //
-  //
-  // gradient(u.x, gradU);
-  // gradient(u.y, gradV);
-  //
-  //
-  //
-  // foreach(reduction(+:dudz), reduction(+:eps)){
-  //   foreach_layer(){
-  //
-  //   }
-  // }
- 
-
-// event image (t = end) {
-//   clear();
-//   static FILE * fp = fopen ("image.ppm", "w");
-//   output_ppm(eta, fp, min=-0.1, max=0.1);
-//
-// }
-
-// event snapshot (t = end)
-// {
-//   clear();
-	
-  // 3/4 view
-  // view (quat = {0.567, 0.137, 0.196, 0.789},
-  //     fov = 30, near = 0.01, far = 1000,
-  //     tx = 0.048, ty = -0.001, tz = -2.096,
-  //     width = 1398, height = 803);
-  //
-  //
-  // char s[80];
-  // sprintf (s, "t = %.2f", t);
-  // draw_string (s, size = 80);
-  // for (double x = -1; x <= 1; x++)
-  //   translate (x) {
-  //     squares ("eta", linear = true, z = "eta*10", min = -1.0, max = 1.0 , map=gray);
-  //   }
-  // box ();
-  //
-  //
-  //
-  //
-  //
-  // colorbar(map=gray, label="eta (m)", min=-1.0,max=1.0, pos={-0.95,-0.5},
-  //          levels=10);
-  // save ("snap_side.png");
-  //
-  //
-  // // top view
-  // clear();
-  // view (quat = {0.000, 0.000, 0.000, 1.000},
-  //     fov = 30, near = 0.01, far = 1000,
-  //     tx = 0.000, ty = 0.000, tz = -2.505,
-  //     width = 1398, height = 803);
-  //
-  //
-  // sprintf (s, "t = %.2f", t);
-  // draw_string (s, size = 80);
-  // for (double x = -1; x <= 1; x++)
-  //   translate (x) {
-  //     squares ("eta", min = -1.0, max = 1.0 , map=gray);
-  //   }
-  // box ();
-  //
-  // colorbar(map=gray, label="eta (m)", min=-1.0,max=1.0, pos={-0.95,-0.5},
-  //          levels=10);
-  // save ("snap_top.png");
-
-
-//}
 
 // Writing a 4D netcdf file
 event output(t = 0.; t<= tend+1e-10; t+=dtout){
