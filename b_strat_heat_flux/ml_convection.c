@@ -65,8 +65,9 @@ char file_out[20] = "out.nc";         // file name of output
 char file_restart[20] = "restart.nc"; // file name of restart
 // -> Initial conditions
 double strat = 0.002;       // [s-1] N^2 stratification
-double qt = 100;            // [W] Heat flux
-double Ts = 20;             // [K] Surface temperature (arbitrary)
+double Ts = 20.;             // [K] Surface temperature (arbitrary)
+// -> Forcing
+double qt = 100.;            // [W.m-2] Heat flux
 // -> Domain definition
 int N_grid = 5 [];       // 2^N_grid : number of x and y gridpoints
 double L = 200.0 [1];       // domain size
@@ -85,11 +86,13 @@ double nu0 = 0.;            // Viscosity for vertical diffusion
 double thetaH = 0.5;        // theta_h for dumping fast barotropic modes
 
 
-double rho0 = 1025.     // [kg.m-3] reference density
-double cp = 4.2e3       // [J.kg-1.K-1] heat capacity water
-double betaT = 2e-4;    // Linear equation of state: drho = betaT*(T0-T) (Vallis 2.4)
-#define drho(T) (betaT*(T0-T);
-#define T0(z) (T1 + (T0 - T1)*(z + H0)/H0)
+double rho0 = 1025.;     // [kg.m-3] reference density
+double cp = 4.2e3;       // [J.kg-1.K-1] heat capacity water
+double betaT = 2e-4;     // Linear equation of state: drho = betaT*(T0-T) (Vallis 2.4)
+double T0 = 20.;
+#define drho(T) (betaT*(T0-T))
+#define Tini(z) -rho0*strat/(g*betaT)*z + Ts
+//#define T0(z) (T1 + (T0 - T1)*(z + H0)/H0)
 #include "layered/dr.h"
 
 // diag
@@ -161,6 +164,7 @@ event init(i =  0) {
       zb[] = -h0;
       eta[] = 0.;
       double H = - zb[];
+      
       foreach_layer() {
         h[] = H/nl;
       } 
@@ -170,10 +174,13 @@ event init(i =  0) {
     vertical_remapping (h, tracers);
     // step 3: set currents
     foreach() {
+      double z = zb[];
       foreach_layer() {
+        z += h[]/2.;
         u.x[] = 0.;
         u.y[] = 0.;
         w[] = 0.;
+        T[] = Tini(z);
       }
     }
   }
@@ -194,12 +201,11 @@ event init(i =  0) {
 
 }
 
+// This event adds a heat flux forcing at surface
 event forcing(i++){
-  // This event adds a heat flux forcing at surface
-  foreach(){
-    T[:,:,nl-1] = dt*(T[:,:,nl-1] + qt/h[:,:,nl-1])
+    foreach(){
+    T[0,0,nl-1] = dt*(T[0,0,nl-1] + qt/h[0,0,nl-1]);
   }
-
 }
 
 // This event compute layer average of u.x
