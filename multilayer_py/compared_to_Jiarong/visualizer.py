@@ -1,3 +1,26 @@
+"""
+# Description
+
+    This script compares a Basilisk multi-layer simulation to [1,2].
+
+[1] Wu, J., Popinet, S., & Deike, L. (2023). Breaking wave field statistics 
+with a multi-layer model. Journal of Fluid Mechanics, 968, A12. 
+https://doi.org/10.1017/jfm.2023.522
+
+[2] Wu, J., Popinet, S., Chapron, B., Farrar, J. T., & Deike, L. (2025). 
+Turbulence and Energy Dissipation from Wave Breaking. Journal of Physical 
+Oceanography, 55(9), 1521–1534. https://doi.org/10.1175/JPO-D-25-0052.1
+
+# Conda Environment
+
+    conda activate ml_dec2025
+
+# How to run
+
+    python3 visualizer.py
+"""
+
+
 import numpy as np
 import matplotlib.pyplot as plt
 import xarray as xr
@@ -19,9 +42,8 @@ from multilayer_py.tools.diags import interpz, vorticity, dissipation
 #
 ### --------------------
 
-#filename="/home/jacqhugo/Debut_these/breaking_wave_project/ml_breaking/out.nc"
-filename="/home/jacqhugo/breaking_wave_project/ml_breaking_save/out.nc"
-filename="/home/jacqhugo/breaking_wave_project/output_N8_P0.1/out.nc"
+# My data
+filename="/home/jacqhugo/breaking_wave_project/a_first_simu/N9_P0.02/out.nc"
 # getting back Jiarong's data
 Jpath = "/home/jacqhugo/breaking_wave_project/multilayer_py/data_Jiarong/"
 
@@ -33,7 +55,9 @@ g = 9.81
 L0 = 200.0 # m
 kp = 10  * np.pi / L0
 wp = np.sqrt(g*kp)
-
+fp = wp/(2*np.pi)
+Tp = 1/fp
+Tp = 2.0 # s
 
 
 
@@ -77,26 +101,29 @@ s_eta = Spectra2D(ds.eta, compute=False)
 # Plotting
 fig, ax = plt.subplots(1,1,figsize = (3,3),constrained_layout=True,dpi=dpi)
 for k in range(len(at_t)):
-    ax.loglog(s_eta.freq_r*2*np.pi/kp, s_eta.sel(time=at_t[k])*kp**3, 
+    ax.loglog(s_eta.freq_r*2*np.pi/kp, s_eta.sel(time=at_t[k])*kp**3,
+    #ax.loglog(s_eta.freq_r, s_eta.sel(time=at_t[k])*kp**3,
               c=colors[k],
-              label=r'$\omega_p t=$'+str(int(wp*at_t[k])))
-    ax.set_xlabel(r'$k/k_p$')
-    ax.set_ylabel(r'$F_{\eta}(k).k_p^3$')
-    ax.set_ylim([1e-7,1e-2])
-
+              label=r'$t/T_p=$'+str(int(at_t[k]/Tp)))
+       
+ax.set_xlabel(r'$k/k_p$')
+#ax.set_xlabel(r'$k$')
+ax.set_ylabel(r'$F_{\eta}(k).k_p^3$')
 ax.vlines(1,1e-8,1,ls='--', colors='gray') # TODO: modify this into 1/dx
+# ax.vlines(kp*L0,1e-8,1,ls='--', colors='gray')
 ax.set_ylim([1e-8, 1e-1])
-ax.set_xlim([4e-1,2e1])
+# ax.set_xlim([4e-1,2e1])
+#ax.set_xlim([1e1,1e3])
 ax.legend()
 fig.savefig('eta_spectra_evolution.svg')
 
-
+raise Exception
 # vs Jiarong
 for k,ttime in enumerate(at_t):
     fig, ax = plt.subplots(1,1,figsize = (3,3),constrained_layout=True,dpi=dpi)
     ax.loglog(s_eta.freq_r*2*np.pi/kp, s_eta.sel(time=ttime)*kp**3, 
               c=colors[k],
-              label=r'$\omega_p t=$'+str(int(wp*at_t[k])))
+              label=r'$t/Tp=$'+str(int(at_t[k]/Tp)))
     ax.loglog(Js[k][:,0]/L0/kp,Js[k][:,1], c=colors[k], ls='--')
     ax.set_ylim([1e-7,1e-2])
     fig.savefig(r"eta_spectra_vs_J_%d.svg" % int(wp*at_t[k]))
@@ -137,34 +164,6 @@ Jdiss_interp1 = np.loadtxt(Jpath+'2025_fig7c_abs1.txt',skiprows=1,delimiter=",")
 Jdiss_interp2 = np.loadtxt(Jpath+'2025_fig7c_abs2.txt',skiprows=1,delimiter=",")
 Jdiss_lagr = np.loadtxt(Jpath+'2025_fig7c_layer.txt',skiprows=1,delimiter=",")
 
-
-fig, ax = plt.subplots(1,3,figsize = (9,3),constrained_layout=True,dpi=dpi)
-# U
-ax[0].set_xlabel('<u> (m/s)')
-ax[0].plot(ux_lagr, z_lagr, c='k', ls='-', label='layer')
-ax[0].plot(ux_interp1, znew, c='b', ls='-', label='abs 1')
-ax[0].plot(ux_interp2, znew, c='b', ls='--', label='abs 2')
-
-# Vorticity
-ax[1].set_xlabel('<enstrophy>')
-ax[1].semilogx(ens_lagr, z_lagr, c='k', ls='-', label='layer')
-ax[1].semilogx(ens_interp1, znew, c='b', ls='-', label='abs 1')
-ax[1].semilogx(ens_interp2, znew, c='b', ls='--', label='abs 2')
-
-# Dissipation
-ax[2].set_xlabel('<diss>')
-ax[2].semilogx(diss_lagr, z_lagr, c='k', ls='-', label='layer')
-ax[2].semilogx(diss_interp1, znew, c='b', ls='-', label='abs 1')
-ax[2].semilogx(diss_interp2, znew, c='b', ls='--', label='abs 2')
-
-for axe in ax:
-    axe.legend(frameon=False)
-    axe.set_ylim([-8,0])
-    axe.set_ylabel('z (m)')
-fig.savefig('avg_profiles.svg')
-
-
-
 # Profiles comparison vs Jiarong's papers
 fig, ax = plt.subplots(1,3,figsize = (9,3),constrained_layout=True,dpi=dpi)
 # U
@@ -172,16 +171,47 @@ ax[0].set_xlabel('<u> (m/s)')
 ax[0].plot(ux_lagr, z_lagr, c='k', ls='-', label='layer')
 ax[0].plot(ux_interp1, znew, c='b', ls='-', label='abs 1')
 ax[0].plot(ux_interp2, znew, c='b', ls='--', label='abs 2')
+ax[0].set_xlim([0,0.2])
+
 # Vorticity
 ax[1].set_xlabel('<enstrophy>')
 ax[1].semilogx(ens_lagr, z_lagr, c='k', ls='-', label='layer')
 ax[1].semilogx(ens_interp1, znew, c='b', ls='-', label='abs 1')
 ax[1].semilogx(ens_interp2, znew, c='b', ls='--', label='abs 2')
+ax[1].set_xlim([1e-4,1])
+
 # Dissipation
 ax[2].set_xlabel('<diss>')
 ax[2].semilogx(diss_lagr, z_lagr, c='k', ls='-', label='layer')
 ax[2].semilogx(diss_interp1, znew, c='b', ls='-', label='abs 1')
 ax[2].semilogx(diss_interp2, znew, c='b', ls='--', label='abs 2')
+ax[2].set_xlim([1e-3,10])
+
+for axe in ax:
+    axe.legend(frameon=False)
+    axe.set_ylim([-10,0])
+    axe.set_ylabel('z (m)')
+fig.savefig('avg_profiles.svg')
+
+
+
+# # Profiles comparison vs Jiarong's papers
+# fig, ax = plt.subplots(1,3,figsize = (9,3),constrained_layout=True,dpi=dpi)
+# # U
+# ax[0].set_xlabel('<u> (m/s)')
+# ax[0].plot(ux_lagr, z_lagr, c='k', ls='-', label='layer')
+# ax[0].plot(ux_interp1, znew, c='b', ls='-', label='abs 1')
+# ax[0].plot(ux_interp2, znew, c='b', ls='--', label='abs 2')
+# # Vorticity
+# ax[1].set_xlabel('<enstrophy>')
+# ax[1].semilogx(ens_lagr, z_lagr, c='k', ls='-', label='layer')
+# ax[1].semilogx(ens_interp1, znew, c='b', ls='-', label='abs 1')
+# ax[1].semilogx(ens_interp2, znew, c='b', ls='--', label='abs 2')
+# # Dissipation
+# ax[2].set_xlabel('<diss>')
+# ax[2].semilogx(diss_lagr, z_lagr, c='k', ls='-', label='layer')
+# ax[2].semilogx(diss_interp1, znew, c='b', ls='-', label='abs 1')
+# ax[2].semilogx(diss_interp2, znew, c='b', ls='--', label='abs 2')
 
 
 
