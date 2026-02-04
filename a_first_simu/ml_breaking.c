@@ -266,10 +266,17 @@ event init(i =  0) {
 // }
 
 // This event compute layer average of u.x
-event compute_horizontal_avg (i++; t<=tend+1e-10){
+//
+// NOTE: for faster run, I compute only instant horizontal mean
+// but then there is the dt/dt_mean that I have to correct after
+//
+//event compute_horizontal_avg (i++; t<=tend+1e-10){
+event compute_horizontal_avg (t+=dt_mean; t<=tend+1e-10){
   foreach(reduction(+:u_profile[:nl]))
     foreach_layer(){
-      u_profile[point.l] += u.x[] / (N*N) * dt / dt_mean;
+      //u_profile[point.l] += u.x[] / (N*N) * dt / dt_mean;
+      u_profile[point.l] += u.x[] / (N*N); // * dt / dt_mean;
+
     }
 }
 
@@ -373,7 +380,12 @@ event write_diag(t=0., t+=dt_mean){
 
 // Writing a 4D netcdf file
 event output(t = 0.; t<= tend+1e-10; t+=dtout){
+  // netcdf output
   write_nc();
+  // regular dump
+  char dname[100];
+  sprintf (dname, "dump_t%g", t);
+  dump(dname);
 }
 
 // Clean for my diag of layer avg
