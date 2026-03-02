@@ -8,11 +8,17 @@ multilayer_py/tools/__pycache__/
 multilayer_py/visualize/__pycache__/
 
 
-a_first_simu/ml_breaking_save_visu/
-a_first_simu/output_N8_P0.1/
-a_first_simu/_ml_breaking.c
-a_first_simu/ml_breaking/
-a_first_simu/output_N10_P0.02_NaNs/
+first_try/ml_breaking_save_visu/
+first_try/output_N8_P0.1/
+first_try/_ml_breaking.c
+first_try/ml_breaking/
+first_try/output_N10_P0.02_NaNs/
+first_try/N9_P0.02/
+first_try/output_N10_P0.02/
+first_try/output_N6_P0.02/
+first_try/output_N7_P0.02/
+first_try/output_N7_P0.02_NaNs/
+
 
 b_strat_heat_flux/ml_convection.log~
 b_strat_heat_flux/ml_convection/
