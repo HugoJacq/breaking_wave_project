@@ -40,7 +40,7 @@ from diags import interpz, grad_velocities, vorticity, dissipation
 ### --------------------
 
 # My data
-filename="/home/jacqhugo/breaking_wave_project/a0_jiarong_simu/N10_P0.02/out.nc"
+filename="/home/jacqhugo/basilisk/wiki/sandbox/hugoj/reproducing_jiarongs_plots/N10_P0.02/out.nc"
 # getting back Jiarong's data
 Jpath = "data_Jiarong/"
 save_nc = './data.nc'
@@ -66,7 +66,7 @@ print("--------------------\n")
 ### --------------
 ### surface elevation
 ### --------------
-if False:
+if True:
     print("* Surface elevation, spectra")
     # opening file
     ds, grid = read_data(filename)
@@ -97,19 +97,20 @@ if False:
     # Plotting
     fig, ax = plt.subplots(1,1,figsize = (3,3),constrained_layout=True,dpi=dpi)
     for k in range(len(at_t)):
-        ax.loglog(s_eta.freq_r*2*np.pi/kp, s_eta.sel(time=at_t[k])*kp**3,
+        ax.loglog(s_eta.freq_r*2*np.pi*L0, s_eta.sel(time=at_t[k])*kp**3,
         #ax.loglog(s_eta.freq_r, s_eta.sel(time=at_t[k])*kp**3,
                     c=colors[k],
-                label=r'$t/T_p=$'+str(int(at_t[k]/Tp)))
+                #label=r'$t/T_p=$'+str(int(at_t[k]/Tp)))
+                label=r'$w_p t=$'+str(int(wp*at_t[k])))
         
-    ax.set_xlabel(r'$k/k_p$')
+    ax.set_xlabel(r'$kL$')
     #ax.set_xlabel(r'$k$')
     ax.set_ylabel(r'$F_{\eta}(k).k_p^3$')
     ax.vlines(1,1e-8,1,ls='--', colors='gray') # TODO: modify this into 1/dx
-    # ax.vlines(kp*L0,1e-8,1,ls='--', colors='gray')
-    ax.set_ylim([1e-8, 1e-1])
+    ax.vlines(kp*L0,1e-8,1,ls='--', colors='gray')
+    ax.set_ylim([1e-7, 1e-2])
     # ax.set_xlim([4e-1,2e1])
-    #ax.set_xlim([1e1,1e3])
+    ax.set_xlim([1e1,1e3])
     ax.legend()
     fig.savefig('eta_spectra_evolution.svg')
 
@@ -117,12 +118,16 @@ if False:
     # vs Jiarong
     for k,ttime in enumerate(at_t):
         fig, ax = plt.subplots(1,1,figsize = (3,3),constrained_layout=True,dpi=dpi)
-        ax.loglog(s_eta.freq_r*2*np.pi/kp, s_eta.sel(time=ttime)*kp**3, 
+        ax.loglog(s_eta.freq_r*2*np.pi*L0, s_eta.sel(time=ttime)*kp**3, 
                 c=colors[k],
                 #label=r'$t/Tp=$'+str(int(at_t[k]/Tp)))
                 label=r'$w_p t=$'+str(int(wp*at_t[k])))
-        ax.loglog(Js[k][:,0]/L0/kp,Js[k][:,1], c=colors[k], ls='--')
+        ax.loglog(Js[k][:,0],Js[k][:,1], c=colors[k], ls='--')
         ax.set_ylim([1e-7,1e-2])
+        ax.set_xlim([1e1,1e3])
+        ax.set_xlabel(r'$kL$')
+        ax.set_ylabel(r'$F_{\eta}(k).k_p^3$')
+        ax.legend()
         fig.savefig(r"eta_spectra_vs_J_%d.svg" % int(wp*at_t[k]))
 
     # if not os.path.isfile(save_nc):
@@ -134,7 +139,7 @@ if False:
 ### profiles
 ### --------------
 
-if True:
+if False:
     print("* Profiles")
         
     print('Computing profiles ...')
