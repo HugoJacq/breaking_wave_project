@@ -48,3 +48,10 @@ a1_C_vs_python_inispec/main
 a1_C_vs_python_inispec/__*
 a1_C_vs_python_inispec/eta*
 todos.md
+.qccRjIeoo/
+a0_jiarong_simu/.qccRjIeoo/
+a0_jiarong_simu/N10_P0.02/
+a0_jiarong_simu/_field_PM.c
+a0_jiarong_simu/field_PM/
+a0_jiarong_simu/field_PMmpi.c
+a0_jiarong_simu/postprocess/save_data_Jiarong/
