@@ -69,6 +69,32 @@ def pol2cart(rho, phi):
     y = rho * np.sin(phi)
     return(x, y)
 
+
+def spectrum_case(case): 
+    if case==1:
+        return 
+
+# analytical spectrum
+def spectrum_PM (P, kp, kmod):
+    k = np.where(kmod==0.,np.nan,kmod)
+    F_kmod = P*k**(-2.5)*np.exp(-1.25*(kp/k)**2)
+    return F_kmod
+
+def spectrum_PM_flat(P, kp, kmod, flat=False):
+    """
+    Wrapper around spectrum_PM with an optional flat output mode.
+    
+    Parameters:
+        P, kp, kmod : same as spectrum_PM
+        flat        : if True, returns an array of ones with the same shape
+                      as the spectrum (equivalent to uncommenting *0 + 1)
+    """
+    result = spectrum_PM(P, kp, kmod)
+    return np.ones_like(result) if flat else result
+
+
+
+
 ####################################
 print("\n=====================================")
 print("PART 1")
@@ -78,116 +104,113 @@ Special care should be taken for the evaluation of the function.
 The definition of the k and theta arrays are crucial to verify parceval equalities
 '''
 
-# analytical spectrum
-def spectrum_PM (P, kp, kmod):
-    k = np.where(kmod==0.,np.nan,kmod)
-    F_kmod = P*k**(-2.5)*np.exp(-1.25*(kp/k)**2)
-    return F_kmod#*0 + 1 # <- uncomment this to have F(k) = 1 for all k !
+for k,flat in enumerate([True, False]):
+    case=k+1
+    print(f"Working on case number {case}")
+    dk_fine = (kmaxL/L - kminL/L)/200
+    fine_k = np.arange(kminL/L, kmaxL/L, dk_fine)
+    fine_F = spectrum_PM_flat(P,kp,fine_k,flat=flat)
+    dk_fine = fine_k[1]-fine_k[0]
+    print("var fine: %f" %(np.sum(fine_F)*dk_fine*2*np.pi))
 
-dk_fine = (kmaxL/L - kminL/L)/200
-fine_k = np.arange(kminL/L, kmaxL/L, dk_fine)
-fine_F = spectrum_PM(P,kp,fine_k)
-dk_fine = fine_k[1]-fine_k[0]
-print("var fine: %f" %(np.sum(fine_F)*dk_fine*2*np.pi))
+    # 1) giving it no particular direction
+    N_mode = 512
 
-# 1) giving it no particular direction
-N_mode = 512
+    # we build F(k,theta)
+    dtheta = 2*np.pi/N_mode
+    dr = (kmaxL/L - kminL/L)/N_mode
+    radii = np.arange(kminL/L, kmaxL/L, dr)
+    thetas = np.arange(-np.pi, np.pi+dtheta, dtheta)
+    r_tile, theta_tile = np.meshgrid(radii, thetas)
+    F_ktheta = spectrum_PM_flat(P, kp, r_tile, flat=flat)/r_tile
+    F_k = np.sum((F_ktheta*r_tile)[:-1,:], axis=0)*dtheta # do not sum twice theta=pi
+    print('var F_k = %f' %(np.nansum(F_k)*dr))
 
-# we build F(k,theta)
-dtheta = 2*np.pi/N_mode
-dr = (kmaxL/L - kminL/L)/N_mode
-radii = np.arange(kminL/L, kmaxL/L, dr)
-thetas = np.arange(-np.pi, np.pi+dtheta, dtheta)
-r_tile, theta_tile = np.meshgrid(radii, thetas)
-F_ktheta = spectrum_PM(P, kp, r_tile)/r_tile
-F_k = np.sum((F_ktheta*r_tile)[:-1,:], axis=0)*dtheta # do not sum twice theta=pi
-print('var F_k = %f' %(np.nansum(F_k)*dr))
+    # plot F_ktheta
+    fig, ax = plt.subplots(1,1,figsize = (7,5),constrained_layout=True,dpi=dpi,subplot_kw={'projection': 'polar'})
+    s=ax.pcolormesh(thetas, radii, (F_ktheta).T*kp**3, vmin=0., vmax=0.003)
+    ax.set_title('F_ktheta')
+    plt.colorbar(s,ax=ax)
 
-# plot F_ktheta
-fig, ax = plt.subplots(1,1,figsize = (7,5),constrained_layout=True,dpi=dpi,subplot_kw={'projection': 'polar'})
-s=ax.pcolormesh(thetas, radii, (F_ktheta).T*kp**3, vmin=0., vmax=0.003)
-ax.set_title('F_ktheta')
-plt.colorbar(s,ax=ax)
+    # we build F(kx,ky) from the F(k,theta) with interpolation
+    dkx = (kmaxL/L - kminL/L)/(N_mode)
+    kx = np.arange(-kmaxL/L/np.sqrt(2), kmaxL/L/np.sqrt(2), dkx)
+    ky = kx
+    dkx = kx[1]-kx[0]
+    kx_tile, ky_tile = np.meshgrid(kx,ky)
+    rc_tile, tc_tile = cart2pol(kx_tile,ky_tile) # kx,ky points in polar
+    J = r_tile # E(k,theta) = E(kx,ky)*J avec J = k
+    F_kxky_tile = griddata((r_tile.ravel(), theta_tile.ravel()), (F_ktheta).ravel(),
+                            (rc_tile, tc_tile), method='linear', fill_value=0)
+    print("var F_kxky (interpolated from F_ktheta) = %f" %(np.nansum(F_kxky_tile)*dkx**2))
 
-# we build F(kx,ky) from the F(k,theta) with interpolation
-dkx = (kmaxL/L - kminL/L)/(N_mode)
-kx = np.arange(-kmaxL/L/np.sqrt(2), kmaxL/L/np.sqrt(2), dkx)
-ky = kx
-dkx = kx[1]-kx[0]
-kx_tile, ky_tile = np.meshgrid(kx,ky)
-rc_tile, tc_tile = cart2pol(kx_tile,ky_tile) # kx,ky points in polar
-J = r_tile # E(k,theta) = E(kx,ky)*J avec J = k
-F_kxky_tile = griddata((r_tile.ravel(), theta_tile.ravel()), (F_ktheta).ravel(),
-                           (rc_tile, tc_tile), method='linear', fill_value=0)
-print("var F_kxky (interpolated from F_ktheta) = %f" %(np.nansum(F_kxky_tile)*dkx**2))
+    '''
+    # you could think that the following is right:
 
-'''
-# you could think that the following is right:
+    k_norm = np.sqrt(kx_tile**2 + ky_tile**2)
+    F_kxky = spectrum_PM(P, kp, k_norm)
 
-k_norm = np.sqrt(kx_tile**2 + ky_tile**2)
-F_kxky = spectrum_PM(P, kp, k_norm)
-
-# But in fact you evaluate at ||k|| but place the point at (kx,ky), which is at a distance
-# from center of sqrt(kx**2+ky**2) > kx
-# and kx is used as the radial wavenumber
-'''
+    # But in fact you evaluate at ||k|| but place the point at (kx,ky), which is at a distance
+    # from center of sqrt(kx**2+ky**2) > kx
+    # and kx is used as the radial wavenumber
+    '''
 
 
-# plot F_kxky
-fig, ax = plt.subplots(1,1,figsize = (7,5),constrained_layout=True,dpi=dpi)
-s=ax.pcolormesh(kx_tile, ky_tile, F_kxky_tile*kp**3, vmin=0., vmax=0.003)
-ax.set_title('F_kxky')
-plt.colorbar(s,ax=ax)
+    # plot F_kxky
+    fig, ax = plt.subplots(1,1,figsize = (7,5),constrained_layout=True,dpi=dpi)
+    s=ax.pcolormesh(kx_tile, ky_tile, F_kxky_tile*kp**3, vmin=0., vmax=0.003)
+    ax.set_title('F_kxky')
+    plt.colorbar(s,ax=ax)
 
-# We test the azimuth_integral function
-# goes from F_kxky to F_k
-# Note: this comes from https://github.com/bderembl/geostrokit/blob/master/geostrokit/fftlib.py
-#       but I modified it to accept a already built kx,ky (i.e. skip their function 'get_wavenumber')
-def azimuthal_integral2(spec_2D, kx, ky, all_kr=False):
-    nd = spec_2D.ndim
-    if nd == 2:
-        spec_2D = spec_2D[None,...]
-    nl,N,naux = spec_2D.shape
-    
-    k,l = np.meshgrid(kx,kx)
-    K = np.sqrt(k**2 + l**2)
-    if all_kr== False:
-        kr = kx[0,int(N/2)+1:]
-    elif all_kr == True:
-        kmax = K.max()
-        dk = np.abs(kx[2]-kx[1])
-        kr = dk*np.arange(0,int(kmax/dk)+2)
-
-    dk = kr[1] - kr[0]
-    spec_1D = np.zeros((nl,len(kr)))
-    for i in range(kr.size):
-        kfilt =  (K>=kr[i] - 0.5*dk) & (K<kr[i] + 0.5*dk)
-        #    the azimuthal integral is the average value*2*pi*k
-        # but to get the same value of the integral for the 1d spetrum
-        # and the 2d spectrum, it is better to just sum the cells*dk
+    # We test the azimuth_integral function
+    # goes from F_kxky to F_k
+    # Note: this comes from https://github.com/bderembl/geostrokit/blob/master/geostrokit/fftlib.py
+    #       but I modified it to accept a already built kx,ky (i.e. skip their function 'get_wavenumber')
+    def azimuthal_integral2(spec_2D, kx, ky, all_kr=False):
+        nd = spec_2D.ndim
+        if nd == 2:
+            spec_2D = spec_2D[None,...]
+        nl,N,naux = spec_2D.shape
         
-        spec_1D[:,i] = (spec_2D[:,kfilt].sum(axis=-1))*dk #/(2*np.pi) #*kr[i]*2*np.pi/Nbin
-        # Nbin = kfilt.sum()
-        # spec_1D[:,i] = (spec_2D[:,kfilt].sum(axis=-1))*kr[i]/(Nbin)*2*np.pi
-    return kr, spec_1D.squeeze()
+        k,l = np.meshgrid(kx,kx)
+        K = np.sqrt(k**2 + l**2)
+        if all_kr== False:
+            kr = kx[0,int(N/2)+1:]
+        elif all_kr == True:
+            kmax = K.max()
+            dk = np.abs(kx[2]-kx[1])
+            kr = dk*np.arange(0,int(kmax/dk)+2)
 
-F1_kr, F1_k = azimuthal_integral2(F_kxky_tile, kx, ky, all_kr=True)
-dkr = F1_kr[1]-F1_kr[0]
-print("var from azimuthal_integral = %f" %(np.nansum(F1_k)*dkr))
+        dk = kr[1] - kr[0]
+        spec_1D = np.zeros((nl,len(kr)))
+        for i in range(kr.size):
+            kfilt =  (K>=kr[i] - 0.5*dk) & (K<kr[i] + 0.5*dk)
+            #    the azimuthal integral is the average value*2*pi*k
+            # but to get the same value of the integral for the 1d spetrum
+            # and the 2d spectrum, it is better to just sum the cells*dk
+            
+            spec_1D[:,i] = (spec_2D[:,kfilt].sum(axis=-1))*dk #/(2*np.pi) #*kr[i]*2*np.pi/Nbin
+            # Nbin = kfilt.sum()
+            # spec_1D[:,i] = (spec_2D[:,kfilt].sum(axis=-1))*kr[i]/(Nbin)*2*np.pi
+        return kr, spec_1D.squeeze()
+
+    F1_kr, F1_k = azimuthal_integral2(F_kxky_tile, kx, ky, all_kr=True)
+    dkr = F1_kr[1]-F1_kr[0]
+    print("var from azimuthal_integral = %f" %(np.nansum(F1_k)*dkr))
 
 
 
-# Plot all azimuth integrated spectra
-fig, ax = plt.subplots(1,1,figsize = (7,5),constrained_layout=True,dpi=dpi)
-ax.plot(fine_k*L, fine_F*kp**3, label='analytical', marker='x')
-ax.plot(F1_kr*L, (F1_k/(2*np.pi))*kp**3, label='azimuth integrated (geostrokit)', marker='s', markerfacecolor='None')
-ax.plot(radii*L, (F_k/(2*np.pi))*kp**3, label='azimuth integrated (gridata)', ls='--')
-ax.set_ylim([0.,0.003])
-ax.set_ylabel(r'$\phi(k).k_p^3$')
-ax.set_xlabel(r'kL')
-plt.legend()
-fig.savefig('azi_integ_specs.svg')
-fig.savefig('azi_integ_specs.png')
+    # Plot all azimuth integrated spectra
+    fig, ax = plt.subplots(1,1,figsize = (7,5),constrained_layout=True,dpi=dpi)
+    ax.plot(fine_k*L, fine_F*kp**3, label='analytical', marker='x')
+    ax.plot(F1_kr*L, (F1_k/(2*np.pi))*kp**3, label='azimuth integrated (geostrokit)', marker='s', markerfacecolor='None')
+    ax.plot(radii*L, (F_k/(2*np.pi))*kp**3, label='azimuth integrated (gridata)', ls='--')
+    ax.set_ylim([0.,0.003])
+    ax.set_ylabel(r'$\phi(k).k_p^3$')
+    ax.set_xlabel(r'kL')
+    plt.legend()
+    fig.savefig(f'azi_integ_specs_case{case}.svg')
+    fig.savefig(f'azi_integ_specs_case{case}.png')
 
 
 
@@ -337,8 +360,5 @@ print("geostrokit: %f" %(np.sum(F_geostrokit)*dk_g))
 print("xrft: %f" %(np.sum(F_xrft)*dk_xrft))
 print('jiarong (=griddata): %f' %(np.sum(F_jiarong)*dk_j))
 
-#######
-# PART 2
-# a simple direction for which we have an analytical solution
 
 plt.show()
