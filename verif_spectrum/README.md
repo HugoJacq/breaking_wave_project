@@ -5,18 +5,6 @@ spectrum of a 2D field.
 
 ## Requirements
 
-You will need basic python packages:
-```
-numpy
-scipy
-matplotlib
-```
-I also test the methods from the xrft package, so you will need that too:
-```
-xarray
-xrft
-```
-
 To install necessary packages with conda, run
 ```
 conda create --name verif_spec --file ENV.txt
