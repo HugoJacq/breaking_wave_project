@@ -24,20 +24,18 @@ import matplotlib.pyplot as plt
 import xarray as xr
 import os.path
 import time
+import xrft
+from scipy.fft import fft2, fftfreq
 
 from data_reader import read_data, build_grid
-from tools import Spectra2D
+from tools import *
 from diags import interpz, grad_velocities, vorticity, dissipation
-# import from io, diags, plot
+from fftlib import *
 
 
-
-
-### --------------------
-#
-# General parameters
-#
-### --------------------
+"""
+## General parameters
+"""
 
 # My data
 filename="/home/jacqhugo/basilisk/wiki/sandbox/hugoj/reproducing_jiarongs_plots/N10_P0.02/out.nc"
@@ -53,102 +51,175 @@ kp = 10  * np.pi / L0
 wp = np.sqrt(g*kp)
 fp = wp/(2*np.pi)
 Tp = 1/fp
+N = 1024
+L = 200.
 
 print("--------------------")
 print("Peak values:")
 print("kp",kp)
 print("wp",wp)
 print("fp",fp)
-print("TP",Tp)
+print("Tp",Tp)
 print("--------------------\n")
 
 
-### --------------
-### surface elevation
-### --------------
 if True:
     print("* Surface elevation, spectra")
+
+    """
+    ## Surface elevation
+    """
+
     # opening file
     ds, grid = read_data(filename)
     fig, ax = plt.subplots(1,1,figsize = (7,5),constrained_layout=True,dpi=dpi)
-    s=ax.pcolormesh(ds.x, ds.y, ds.eta.isel(time=-1), cmap='Greys_r', vmin=-1, vmax=1)
+    s=ax.pcolormesh(ds.x, ds.y, ds.eta.isel(time=-1)*kp, cmap='Greys_r', vmin=-0.15, vmax=0.3)
     ax.set_xlabel('X (m)')
     ax.set_ylabel('Y (m)')
-    plt.colorbar(s,ax=ax,orientation='vertical',label=r'$\eta$ (m)')
+    plt.colorbar(s,ax=ax,orientation='vertical',label=r'$\eta k_p$')
     fig.savefig('eta.png')
+    
 
+    Hs = 4*np.sqrt((ds.eta**2).mean(dim=['x','y']))
     print('Depth always under the surface: %f (m)' %ds.z.isel(zl=-1).min().values)
+    print('kpHs ini = %f' %(kp*Hs[0]))
+    print('Hs ini (m)= %f' %Hs[0])
 
-    ### --------------
-    ### eta spectra
-    ### --------------
+    """
+    ## Eta spectrum
+    """
+
     # Jiarong's data
     Js_0 = np.loadtxt(Jpath+'2023_fig3c_0.txt',skiprows=1,delimiter=",")
     Js_20 = np.loadtxt(Jpath+'2023_fig3c_25.txt',skiprows=1,delimiter=",")
     Js_100 = np.loadtxt(Jpath+'2023_fig3c_124.txt',skiprows=1,delimiter=",")
     Js_120 = np.loadtxt(Jpath+'2023_fig3c_149.txt',skiprows=1,delimiter=",")
-
     Js = [Js_0, Js_20, Js_100, Js_120]
-
     at_t = [0, 20, 100, 120]
+
+    # building a colormap
     colors = plt.get_cmap('plasma')(np.linspace(0, 1, len(at_t)))
-    # Computing the spectra at some timesteps
-    s_eta = Spectra2D(ds.eta, compute=False)
+
+    
+    # # Computing the spectra at some timesteps
+    # # 1) using xrft
+    # s_eta = xrft.isotropic_power_spectrum(ds.eta, dim=('x','y'), truncate=True)
+    # s_eta2D = xrft.xrft.cross_spectrum(ds.eta, ds.eta,dim=('x','y'))
+    # # 2) using geostrokit
+    #
+
+    
+    
+    """
+    Verification of parceval equalities
+    """
+    if False:
+        it = -1
+        print("\n* Validation of the perceval theorem")
+        print("timestep = %d" %it)
+        
+        print('- 1) using xrft')
+        s_eta = xrft.isotropic_power_spectrum(ds.eta[it], dim=('x','y'), truncate=True)
+        s_eta2D = xrft.xrft.cross_spectrum(ds.eta[it], ds.eta[it],dim=('x','y'))
+        N = len(ds.eta.x)
+        dk =(s_eta.freq_r[1] - s_eta.freq_r[0]).values
+        dk = np.zeros(len(s_eta.freq_r))
+        dk[0] = s_eta.freq_r[0].values
+        dk[1:] = s_eta.freq_r[1:].values-s_eta.freq_r[:-1].values
+        dkx = (s_eta2D.freq_x[1]-s_eta2D.freq_x[0]).values
+        dky = (s_eta2D.freq_y[1]-s_eta2D.freq_y[0]).values
+        var_sum = np.sum(ds.eta[it].values**2)/N**2
+        var_integ1D = np.sum(s_eta.values*dk)
+        var_2D = np.sum(s_eta2D.values)*dkx*dky
+        print(f'Target: variance (sum of eta**2) = {var_sum}')
+        print(f'variance (sum of F(kx,ky)dkxdky) = {var_2D}')
+        print(f'variance (sum of F(k)dk) = {var_integ1D*2*np.pi}')
+        
+        print('- 2) using geostrokit')
+        k,l, spec2D = get_spec_2D(ds.eta[it].values, ds.eta[it].values, Delta=200/1024)
+        kr, spec_1D = get_spec_1D(ds.eta[it].values, ds.eta[it].values, Delta=200/1024)
+        print(f'Target: variance (sum of eta**2) = {var_sum}')
+        print(f'variance spectr1D = {np.sum(spec_1D*(kr[1]-kr[0]))}')
+        print(f'variance spectr2D = {np.sum(spec2D*(k[0,1]-k[0,0])*(l[1,0]-l[0,0]))}')
+
+        print("- 3) using Jiarong's code")
+        print("     var(eta), sum(F), sum(F_polar)")
+        
+        F_150 = jspectrum_integration(ds.eta[it].values, L0, N, CHECK=True)
+    
+    if False:
+        print('Evolution of wave energy <eta**2> ')
+        for k in range(len(ds.eta.time)):
+            print(f"t = {ds.time[k].values}, {np.sum(ds.eta[k].values**2)/N**2} m^2")
+
+    """
+    Spectrum evolution in time
+    """
+    # Computing spectrum at all timesteps
+    # 1) xrft
+    s_eta = xrft.isotropic_power_spectrum(ds.eta, dim=('x','y'), truncate=True)
+    s_eta2D = xrft.xrft.cross_spectrum(ds.eta, ds.eta,dim=('x','y'))
+    # 2) geostrokit
+    f_eta = np.zeros((len(ds.eta.time),N//2-1))
+    for k in range(len(ds.eta.time)):
+        fr, f_eta[k] = get_spec_1D(ds.eta[k].values, ds.eta[k].values, Delta=L/N)
+    # 3) Jiarong's code
+    wavenumber = 2*np.pi*np.fft.fftfreq(n=N,d=L0/N)
+    jiarong_k = wavenumber[0:int(N/2)]
+    f_eta_jiarong = np.zeros((len(ds.eta.time),len(jiarong_k)))
+    for k in range(len(ds.eta.time)):
+        f_eta_jiarong[k] = jspectrum_integration(ds.eta[k].values, L0, N, CHECK=False)
+
+
+
     # Plotting
     fig, ax = plt.subplots(1,1,figsize = (3,3),constrained_layout=True,dpi=dpi)
     for k in range(len(at_t)):
-        ax.loglog(s_eta.freq_r*2*np.pi*L0, s_eta.sel(time=at_t[k])*kp**3,
-        #ax.loglog(s_eta.freq_r, s_eta.sel(time=at_t[k])*kp**3,
+        ax.loglog(fr*2*np.pi*L0, (f_eta[k]/(2*np.pi))*kp**3,
                     c=colors[k],
-                #label=r'$t/T_p=$'+str(int(at_t[k]/Tp)))
                 label=r'$w_p t=$'+str(int(wp*at_t[k])))
         
     ax.set_xlabel(r'$kL$')
-    #ax.set_xlabel(r'$k$')
     ax.set_ylabel(r'$F_{\eta}(k).k_p^3$')
     ax.vlines(1,1e-8,1,ls='--', colors='gray') # TODO: modify this into 1/dx
     ax.vlines(kp*L0,1e-8,1,ls='--', colors='gray')
     ax.set_ylim([1e-7, 1e-2])
-    # ax.set_xlim([4e-1,2e1])
     ax.set_xlim([1e1,1e3])
     ax.legend()
     fig.savefig('eta_spectra_evolution.svg')
-
+    fig.savefig('eta_spectra_evolution.png')
 
     # vs Jiarong
     for k,ttime in enumerate(at_t):
         fig, ax = plt.subplots(1,1,figsize = (3,3),constrained_layout=True,dpi=dpi)
-        ax.loglog(s_eta.freq_r*2*np.pi*L0, s_eta.sel(time=ttime)*kp**3, 
-                c=colors[k],
-                #label=r'$t/Tp=$'+str(int(at_t[k]/Tp)))
-                label=r'$w_p t=$'+str(int(wp*at_t[k])))
-        ax.loglog(Js[k][:,0],Js[k][:,1], c=colors[k], ls='--')
+        ax.loglog(jiarong_k*L0, (f_eta_jiarong[k])*kp**3,
+                c='gray',
+                label="Jiarong code only")
+        ax.loglog(fr*2*np.pi*L0, (f_eta[k]/(2*np.pi))*kp**3,
+                c='b', ls='--',
+                  label='Jiarong C code, my py code') # using geostrokit
+        ax.loglog(Js[k][:,0],Js[k][:,1], c='r', ls='-', label="Jiarong's paper")
+        ax.set_title(r'$w_p t=$'+str(int(wp*at_t[k])))
         ax.set_ylim([1e-7,1e-2])
         ax.set_xlim([1e1,1e3])
         ax.set_xlabel(r'$kL$')
         ax.set_ylabel(r'$F_{\eta}(k).k_p^3$')
-        ax.legend()
+        plt.legend(fontsize=6)
         fig.savefig(r"eta_spectra_vs_J_%d.svg" % int(wp*at_t[k]))
+        fig.savefig(r"eta_spectra_vs_J_%d.png" % int(wp*at_t[k]))
+        
 
-    # if not os.path.isfile(save_nc):
-    #     ds.close()
-    #     ds.to_netcdf(save_nc)
-    
-
-### --------------
-### profiles
-### --------------
+"""
+## Profiles
+"""
 
 if False:
     print("* Profiles")
         
     print('Computing profiles ...')
 
-
-
-    it = -1
+    time_ =  120 # s
     znew = np.arange(-8,0.1,0.1)
-    
     
     # gradients
     if not os.path.isfile(save_nc):
@@ -165,10 +236,18 @@ if False:
         ds = xr.open_dataset(save_nc)
         grid = build_grid(ds)
 
-
-    
-    
+    # Dask performances
     ds = ds.chunk({'time':5, 'x':128, 'y':128, 'zl':-1})
+    
+    # initial profiles
+    ds0 = ds.sel(time=0)
+    ux_lagr0 = ds0['u.x'].mean(['x','y']).compute()
+    ens_lagr0 = ds0['enstrophy'].mean(['x','y']).compute()
+    diss_lagr0 = ds0['epsilon'].mean(['x','y']).compute()
+    z_lagr0 = ds0.z.mean(['x','y']).compute()
+    
+    # t=120s profiles
+    ds1 = ds.sel(time=time_)
 
     # print('starting interp1')
     # t1 = time.time()
@@ -179,35 +258,35 @@ if False:
     # t2 = time.time()
     # print(f'interp1 done, {int(t2-t1)} s')
 
-    z_lagr = ds.z.isel(time=-1).mean(['x','y'])
-    ux_interp1 = interpz(ds.z.isel(time=-1), ds['u.x'].isel(time=-1), znew, fill_value=np.nan).mean(dim=['x','y']).compute()
-    ux_interp2 = interpz(ds.z.isel(time=-1), ds['u.x'].isel(time=-1), znew, fill_value=0.).mean(dim=['x','y']).compute()
-    ux_lagr = ds['u.x'].isel(time=it).mean(['x','y'])
-    
-    ens_interp1 = interpz(ds.z.isel(time=-1), ds['enstrophy'].isel(time=-1), znew, fill_value=np.nan).mean(dim=['x','y']).compute()
-    ens_interp2 = interpz(ds.z.isel(time=-1), ds['enstrophy'].isel(time=-1), znew, fill_value=0.).mean(dim=['x','y']).compute()
-    ens_lagr = ds['enstrophy'].isel(time=it).mean(['x','y'])
+    z_lagr = ds1.z.mean(['x','y'])
+    ux_interp1 = interpz(ds1.z, ds1['u.x'], znew, fill_value=np.nan).mean(dim=['x','y']).compute()
+    ux_interp2 = interpz(ds1.z, ds1['u.x'], znew, fill_value=0.).mean(dim=['x','y']).compute()
+    ux_lagr = ds1['u.x'].mean(['x','y'])
 
-    diss_interp1 = interpz(ds.z.isel(time=-1), ds['epsilon'].isel(time=-1), znew, fill_value=np.nan).mean(dim=['x','y']).compute()
-    diss_interp2 = interpz(ds.z.isel(time=-1), ds['epsilon'].isel(time=-1), znew, fill_value=0.).mean(dim=['x','y']).compute()
-    diss_lagr = ds['epsilon'].isel(time=it).mean(['x','y'])
+    ens_interp1 = interpz(ds1.z, ds1['enstrophy'], znew, fill_value=np.nan).mean(dim=['x','y']).compute()
+    ens_interp2 = interpz(ds1.z, ds1['enstrophy'], znew, fill_value=0.).mean(dim=['x','y']).compute()
+    ens_lagr = ds1['enstrophy'].mean(['x','y'])
 
-    # z_lagr = ds.z.isel(time=-1).mean(['x','y'])
-    # ux_interp1 = interpz(znew, ds.z.isel(time=-1), ds['u.x'].isel(time=-1), fill_value=np.nan).mean(dim=['x','y']).compute()
-    # ux_interp2 = interpz(znew, ds.z.isel(time=-1), ds['u.x'].isel(time=-1), fill_value=0.).mean(dim=['x','y'])
-    # ux_lagr = ds['u.x'].isel(time=it).mean(['x','y'])
+    diss_interp1 = interpz(ds1.z, ds1['epsilon'], znew, fill_value=np.nan).mean(dim=['x','y']).compute()
+    diss_interp2 = interpz(ds1.z, ds1['epsilon'], znew, fill_value=0.).mean(dim=['x','y']).compute()
+    diss_lagr = ds1['epsilon'].mean(['x','y'])
+
+    # z_lagr = ds.z.sel(time=time_).mean(['x','y'])
+    # ux_interp1 = interpz(znew, ds1.z, ds1['u.x'], fill_value=np.nan).mean(dim=['x','y']).compute()
+    # ux_interp2 = interpz(znew, ds1.z, ds1['u.x'], fill_value=0.).mean(dim=['x','y'])
+    # ux_lagr = ds1['u.x'].mean(['x','y'])
     #
-    # ens_interp1 = interpz(znew, ds.z.isel(time=-1), ds['enstrophy'].isel(time=-1), fill_value=np.nan).mean(dim=['x','y'])
-    # ens_interp2 = interpz(znew, ds.z.isel(time=-1), ds['enstrophy'].isel(time=-1), fill_value=0.).mean(dim=['x','y'])
-    # ens_lagr = ds['enstrophy'].isel(time=it).mean(['x','y'])
+    # ens_interp1 = interpz(znew, ds1.z, ds1['enstrophy'], fill_value=np.nan).mean(dim=['x','y'])
+    # ens_interp2 = interpz(znew, ds1.z, ds1['enstrophy'], fill_value=0.).mean(dim=['x','y'])
+    # ens_lagr = ds1['enstrophy'].mean(['x','y'])
     #
-    # diss_interp1 = interpz(znew, ds.z.isel(time=-1), ds['epsilon'].isel(time=-1), fill_value=np.nan).mean(dim=['x','y'])
-    # diss_interp2 = interpz(znew, ds.z.isel(time=-1), ds['epsilon'].isel(time=-1), fill_value=0.).mean(dim=['x','y'])
-    # diss_lagr = ds['epsilon'].isel(time=it).mean(['x','y'])
+    # diss_interp1 = interpz(znew, ds1.z, ds1['epsilon'], fill_value=np.nan).mean(dim=['x','y'])
+    # diss_interp2 = interpz(znew, ds1.z, ds1['epsilon'], fill_value=0.).mean(dim=['x','y'])
+    # diss_lagr = ds1['epsilon'].mean(['x','y'])
+    #
 
-    print(' Done !')
 
-
+    # Jiarong's data
     Jux_interp1 = np.loadtxt(Jpath+'2025_fig7a_abs1.txt',skiprows=1,delimiter=",")
     Jux_interp2 = np.loadtxt(Jpath+'2025_fig7a_abs2.txt',skiprows=1,delimiter=",")
     Jux_lagr = np.loadtxt(Jpath+'2025_fig7a_layer.txt',skiprows=1,delimiter=",")
@@ -220,11 +299,14 @@ if False:
     Jdiss_interp2 = np.loadtxt(Jpath+'2025_fig7c_abs2.txt',skiprows=1,delimiter=",")
     Jdiss_lagr = np.loadtxt(Jpath+'2025_fig7c_layer.txt',skiprows=1,delimiter=",")
     
+    """
+    ### Profiles from my data
+    """
     if True:
-        # Profiles comparison vs Jiarong's papers
         fig, ax = plt.subplots(1,3,figsize = (9,3),constrained_layout=True,dpi=dpi)
         # U
         ax[0].set_xlabel('<u> (m/s)')
+        ax[0].plot(ux_lagr0, z_lagr0, c='gray', ls='-', label='layer t=0',  marker='s', markerfacecolor='None')
         ax[0].plot(ux_lagr, z_lagr, c='k', ls='-', label='layer',  marker='s', markerfacecolor='None')
         ax[0].plot(ux_interp1, znew, c='b', ls='-', label='abs 1')
         ax[0].plot(ux_interp2, znew, c='b', ls='--', label='abs 2')
@@ -232,6 +314,7 @@ if False:
 
         # Vorticity
         ax[1].set_xlabel('<enstrophy>')
+        ax[1].semilogx(ens_lagr0, z_lagr0, c='gray', ls='-', label='layer t=0',  marker='s', markerfacecolor='None')
         ax[1].semilogx(ens_lagr, z_lagr, c='k', ls='-', label='layer',  marker='s', markerfacecolor='None')
         ax[1].semilogx(ens_interp1, znew, c='b', ls='-', label='abs 1')
         ax[1].semilogx(ens_interp2, znew, c='b', ls='--', label='abs 2')
@@ -239,6 +322,7 @@ if False:
 
         # Dissipation
         ax[2].set_xlabel('<diss>')
+        ax[2].semilogx(diss_lagr0, z_lagr0, c='gray', ls='-', label='layer t=0', marker='s', markerfacecolor='None')
         ax[2].semilogx(diss_lagr, z_lagr, c='k', ls='-', label='layer', marker='s', markerfacecolor='None')
         ax[2].semilogx(diss_interp1, znew, c='b', ls='-', label='abs 1')
         ax[2].semilogx(diss_interp2, znew, c='b', ls='--', label='abs 2')
@@ -249,11 +333,14 @@ if False:
             axe.set_ylim([-10,0])
             axe.set_ylabel('z (m)')
         fig.savefig('avg_profiles.svg')
+        fig.savefig('avg_profiles.png')
 
-
+    """
+    ### Profiles comparison vs Jiarong's papers
+    """
     if True:
-        # Profiles comparison vs Jiarong's papers
         fig, ax = plt.subplots(1,3,figsize = (9,3),constrained_layout=True,dpi=dpi)
+        
         # U
         ax[0].set_xlabel('<u> (m/s)')
         ax[0].plot(Jux_lagr[:,0], Jux_lagr[:,1], c='gray', label='J layer', marker='x', markerfacecolor='None')
@@ -261,14 +348,15 @@ if False:
         ax[0].set_xlim([0,0.2])
         # ax[0].plot(ux_interp1, znew, c='b', ls='-', label='abs 1')
         # ax[0].plot(ux_interp2, znew, c='b', ls='--', label='abs 2')
+        
         # Vorticity
         ax[1].set_xlabel('<enstrophy>')
         ax[1].semilogx(Jens_lagr[:,0], Jens_lagr[:,1], c='gray', label='J layer', marker='x', markerfacecolor='None')
         ax[1].semilogx(ens_lagr, z_lagr, c='k', ls='-', label='layer', marker='s', markerfacecolor='None')
         ax[1].set_xlim([1e-4,1])
-
         # ax[1].semilogx(ens_interp1, znew, c='b', ls='-', label='abs 1')
         # ax[1].semilogx(ens_interp2, znew, c='b', ls='--', label='abs 2')
+        
         # Dissipation
         ax[2].set_xlabel('<diss>')
         ax[2].semilogx(Jdiss_lagr[:,0], Jdiss_lagr[:,1], c='gray', label='J layer', marker='x', markerfacecolor='None' )
@@ -276,12 +364,15 @@ if False:
         # ax[2].semilogx(diss_interp1, znew, c='b', ls='-', label='abs 1')
         # ax[2].semilogx(diss_interp2, znew, c='b', ls='--', label='abs 2')
         ax[2].set_xlim([1e-3,10])
-
+        
+        # nicer figures
+        ax[1].set_title(r'$t=%d s'%time_)
         for axe in ax:
             axe.legend(frameon=False)
             axe.set_ylim([-10,0])
             axe.set_ylabel('z (m)')
         fig.savefig('avg_profiles_vsJiarong.png')
+        fig.savefig('avg_profiles_vsJiarong.svg')
 
 
 plt.show()

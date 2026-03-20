@@ -74,7 +74,7 @@ ax.set_xlim([10,1000])
 ax.set_xlabel('k*L')
 ax.set_ylabel(r'$\phi(k)*kp^3$')
 plt.legend()
-fig.savefig('initial_spectrum_k.svg')
+fig.savefig('initial_spectrum_k.png')
 
 kline = np.linspace(100,300)
 ax.plot(kline,kline**(-3)*2000, c='grey')
