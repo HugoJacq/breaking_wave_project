@@ -45,7 +45,7 @@ int main()
 {
   origin (-L0/2., -L0/2.);
   periodic (right);
-  N = 256;
+  N = 64;
   nl = 30;
   G = g_;
   nu = 1./RE;
@@ -68,7 +68,7 @@ the third-order Stokes solution. */
 
 event init (i = 0)
 {
-
+  fprintf(stderr, "T0=%f",T0);
   /**
   We can use a larger CFL, in particular because we are not dealing
   with shallow-water/wetting/drying. */
@@ -121,7 +121,7 @@ plot [0:6]'log' u 1:2 w l t 'kinetic', '' u 1:3 w l t 'potential', \
 ~~~
 */
 
-event logfile (i++; t<= 2.*T0) //t <= 8.*T0)
+event logfile (i++; t<=T0) //t <= 8.*T0)
 {
   double ke = 0., gpe = 0.;
   foreach (reduction(+:ke) reduction(+:gpe)) {
@@ -133,7 +133,7 @@ event logfile (i++; t<= 2.*T0) //t <= 8.*T0)
     }
     gpe += sq(eta[])*dv();
   }
-  fprintf (stderr, "%g %g %g\n", t/T0, ke/2., g_*gpe/2.);
+  //fprintf (stderr, "%g %g %g\n", t/T0, ke/2., g_*gpe/2.);
 }
 
 event end (i=end){
