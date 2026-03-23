@@ -45,16 +45,11 @@ def read_data(filename: string, dtype='float32'):
     #ds = ds.rename({'u.z':'w'}) # this could be set in bderemble/netcdf_pas.h
     ds = ds.rename({'level':'zl', 'w':'u.z'})
 
+    # Dask performances
+    ds = ds.chunk({'time':5, 'x':64, 'y':64, 'zl':-1})
+
     # xgcm grid
     grid = build_grid(ds)
-    # grid = Grid(ds,
-    #             coords={'X':{'center':'x','left':'x_l'},
-    #                     'Y':{'center':'y','left':'y_l'},
-    #                     'Z':{'center':'zl','left':'zl_l'}},
-    #             autoparse_metadata=False,
-    #             # periodic={'X':'True','Y':'True','Z':'False'},
-    #             boundary={'X':'periodic','Y':'periodic', 'Z':'fill'},
-    #             fill_value={'Z':0})
     return ds, grid
 
 def build_grid(ds):

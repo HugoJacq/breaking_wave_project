@@ -38,7 +38,8 @@ from fftlib import *
 """
 
 # My data
-filename="/home/jacqhugo/basilisk/wiki/sandbox/hugoj/reproducing_jiarongs_plots/N10_P0.02/out.nc"
+filename="/home/jacqhugo/basilisk/wiki/sandbox/hugoj/reproducing_jiarongs_plots/N10_P0.02_L15/out.nc"
+#filename="/home/jacqhugo/basilisk/wiki/sandbox/hugoj/reproducing_jiarongs_plots/N10_P0.02_L30/out.nc"
 # getting back Jiarong's data
 Jpath = "data_Jiarong/"
 save_nc = './data.nc'
@@ -63,7 +64,7 @@ print("Tp",Tp)
 print("--------------------\n")
 
 
-if True:
+if False:
     print("* Surface elevation, spectra")
 
     """
@@ -99,16 +100,6 @@ if True:
 
     # building a colormap
     colors = plt.get_cmap('plasma')(np.linspace(0, 1, len(at_t)))
-
-    
-    # # Computing the spectra at some timesteps
-    # # 1) using xrft
-    # s_eta = xrft.isotropic_power_spectrum(ds.eta, dim=('x','y'), truncate=True)
-    # s_eta2D = xrft.xrft.cross_spectrum(ds.eta, ds.eta,dim=('x','y'))
-    # # 2) using geostrokit
-    #
-
-    
     
     """
     Verification of parceval equalities
@@ -213,7 +204,7 @@ if True:
 ## Profiles
 """
 
-if False:
+if True:
     print("* Profiles")
         
     print('Computing profiles ...')
@@ -225,19 +216,35 @@ if False:
     if not os.path.isfile(save_nc):
         print('I need to compute diags ...')
         ds, grid = read_data(filename)
-        
         ds, update = grad_velocities(ds, grid)
+        # if update:
+        #     ds = 
+        #     for name in ['dudz','dudy','dudx','dvdz','dvdy','dvdx','dwdz','dwdy', 'dwdx']:
+        #
+                
         ds, update = vorticity(ds, grid)
         ds, update = dissipation(ds, grid)
-        if update:
+        if update: 
             print(f'saving diags to {save_nc}')
-            ds.to_netcdf(save_nc)
+            
+            t0 = ds.isel(time=0)
+            t0.to_netcdf('output.nc', mode='w') #, unlimited_dims=['time'])
+            for i in range(1, len(ds.time)):
+                print('saving time t=',ds.time[i].values)
+                chunk = ds.isel(time=i)           # still lazy
+                chunk = chunk.load()              # compute ONLY this slice
+                chunk.to_netcdf('output.nc', mode='a')
+                del chunk
+
+            #ds.to_netcdf(save_nc)
+
     else:
         ds = xr.open_dataset(save_nc)
         grid = build_grid(ds)
+    raise Exception
 
     # Dask performances
-    ds = ds.chunk({'time':5, 'x':128, 'y':128, 'zl':-1})
+    ds = ds.chunk({'time':5, 'x':64, 'y':64, 'zl':-1})
     
     # initial profiles
     ds0 = ds.sel(time=0)
