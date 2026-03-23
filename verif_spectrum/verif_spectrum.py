@@ -1,9 +1,12 @@
-'''
+"""
+
+# Azimuthal integration of 2D spectrum
+
 The goals of this script are:
-‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
-    - compare several methods for computing azimuthal average of 2D spectra
-    - make sure that every methods can retrieve the variance of the signal
-    - use 3 tests cases:
+
+* compare several methods for computing azimuthal average of 2D spectra
+* make sure that every methods can retrieve the variance of the signal
+* use 3 tests cases:
       1) start from F(k) = 1
       2) start from F(k) = PM(k)
       3) start from a synthetic eta, generated from F(k,theta) = PM(k).Psi(theta)
@@ -11,23 +14,34 @@ The goals of this script are:
 You can go from 1) to 2) by changing the function 'spectrum_PM'
 
 Reminder:
-‾‾‾‾‾‾‾‾‾
+
 Parceval equalities:
 
-    var(eta) = integ( integ( F(k,theta).k.dk.dtheta) )
+$$
+\begin{aligned}
+	<\eta^{2}> = \int_{0}^{\infty} \int_{-\pi}^{\pi} E_1(k,\theta) k dk d\theta =
+	\int_{0}^{\infty} \int_{0}^{\infty} E_2 (k_x,k_y) d k_x d k_y
+\end{aligned}
+$$
+
+with $E_1(k,\theta) = E_2 (k_x,k_y) k $
 
 The omnidirectionnal wavenumber spectrum is:
 
-    phi(k) = integ( F(k,theta).k.dtheta)
-
+$$
+\begin{aligned}
+	\phi(k) = \int_{- \pi}^{\pi} E(k,\theta) k d \theta
+\end{aligned}
+$$
 
 Notes:
-‾‾‾‾‾‾
+
 - PM is Pierson-Moscowitz spectrum (sea state)
 - geostrokit azimuthal integration is way faster than interpolation then integration
 - interpolation introduces errors.
 - intergration with the 'azimuthal_integration' is quite precise (error < interp error)
-'''
+"""
+
 import numpy as np
 import matplotlib.pyplot as plt
 import xarray as xr
@@ -36,15 +50,14 @@ import time
 import xrft
 from scipy.fft import fft2, fftfreq
 
-# from data_reader import read_data, build_grid
-# from tools import *
-# from diags import interpz, grad_velocities, vorticity, dissipation
 from scipy.interpolate import griddata
 from fftlib import *
 
+"""
 
-##############################
-# Some parameters
+## Some parameters
+
+"""
 dpi=200 # for the figures
 
 g = 9.81
@@ -81,27 +94,36 @@ def spectrum_PM (P, kp, kmod):
     return F_kmod
 
 def spectrum_PM_flat(P, kp, kmod, flat=False):
-    """
+    '''
     Wrapper around spectrum_PM with an optional flat output mode.
     
     Parameters:
         P, kp, kmod : same as spectrum_PM
         flat        : if True, returns an array of ones with the same shape
                       as the spectrum (equivalent to uncommenting *0 + 1)
-    """
+    '''
     result = spectrum_PM(P, kp, kmod)
     return np.ones_like(result) if flat else result
 
 
 
+"""
 
+## PART 1
+
+From an analytical spectrum, recover variances and plot omnidir spec
+
+Note:
+Special care should be taken for the evaluation of the function.
+The definition of the k and theta arrays are crucial to verify parceval equalities
+
+"""
 ####################################
 print("\n=====================================")
 print("PART 1")
 print(">From an analytical spectrum, recover variances and plot omnidir spec")
 '''
-Special care should be taken for the evaluation of the function.
-The definition of the k and theta arrays are crucial to verify parceval equalities
+
 '''
 
 for k,flat in enumerate([True, False]):
@@ -123,7 +145,7 @@ for k,flat in enumerate([True, False]):
     thetas = np.arange(-np.pi, np.pi+dtheta, dtheta)
     r_tile, theta_tile = np.meshgrid(radii, thetas)
     F_ktheta = spectrum_PM_flat(P, kp, r_tile, flat=flat)/r_tile
-    F_k = np.sum((F_ktheta*r_tile)[:-1,:], axis=0)*dtheta # do not sum twice theta=pi
+    F_k = np.sum((F_ktheta*r_tile)[:-1,:], axis=0)*dtheta # why [:-1,:] ? -> do not sum twice theta=pi
     print('var F_k = %f' %(np.nansum(F_k)*dr))
 
     # plot F_ktheta
@@ -213,39 +235,45 @@ for k,flat in enumerate([True, False]):
     fig.savefig(f'azi_integ_specs_case{case}.png')
 
 
+"""
 
-print("\n=====================================")
-print("PART 2")
-print(">Computing spectra from synthetic eta field")
-'''
+## PART 2
+
+Computing spectra from synthetic eta field
+
 Now we generate a eta field from a given spectrum shape.
 We use the specgen.py script from 
     https://github.com/jiarong-wu/multilayer_breaking/blob/main/specgen/specgen.py
 
 The spectrum shape is the Pierson-Moscowitz spectrum, the directionnal function is
 a cos^5 (normalized in way that variance is preserved).
-'''
+
+"""
+
+print("\n=====================================")
+print("PART 2")
+print(">Computing spectra from synthetic eta field")
 
 def spectrum_gen_linear(shape, N_mode=32, N_power=5, L=200):
     
-    """ The function to generate a kx-ky spectrum based on uni-directional spectrum and a 
+    ''' The function to generate a kx-ky spectrum based on uni-directional spectrum and a 
         cos^N (theta) directional spreading.
         Arguments: 
             shape: the spectrum shape (a function)
             N_mode: # of modes (Right now it's N_mode for kx and N_mode+1 for ky; 
                     has to much what's hard-coded in the spectrum.h headerfile.
             L: physical domain size
-            """
+            '''
     
-    """ # of modes for the uni-directional spectrum 
-        (doesn't matter as much because of interpolation anyway) """
+    '''# of modes for the uni-directional spectrum 
+        (doesn't matter as much because of interpolation anyway) '''
     N_kmod = 64; N_theta = 64 # Uniform grid in kmod and ktheta, can be finer than N_mode 
     thetam = 0 # midline direction
     kmod = np.linspace(2*np.pi/L,1.41*100*2*np.pi/L,N_kmod) # Change 
     theta = np.linspace(-0.5*np.pi, 0.5*np.pi, N_theta) + thetam # Centered around thetam
     kmod_tile, theta_tile = np.meshgrid(kmod,theta)
 
-    """ Pick the spectrum shape """
+    '''Pick the spectrum shape '''
     F_kmod = shape (kmod) # includes the spectral shape, peak, and energy level of choice
     D_theta = np.abs(np.cos(theta-thetam)**N_power) 
     dtheta = theta[1]-theta[0]
@@ -253,18 +281,19 @@ def spectrum_gen_linear(shape, N_mode=32, N_power=5, L=200):
     F_kmod_tile, D_theta_tile = np.meshgrid(F_kmod,D_theta) 
     F_kmodtheta_tile = F_kmod_tile*D_theta_tile/kmod_tile # Notice!! Normalize by k
     
-    """ Uniform grid in kx,ky """
+    '''Uniform grid in kx,ky'''
     kx = np.arange(1,N_mode+1)*2*np.pi/L # based on the grid, interval can't go smaller then pi/L
     ky = np.arange(-N_mode/2,N_mode/2+1)*2*np.pi/L
     kx_tile, ky_tile = np.meshgrid(kx,ky)
     kxp_tile, kyp_tile = pol2cart(kmod_tile, theta_tile)
     
-    """ Project from uniform k to uniform kx,ky """
+    ''' Project from uniform k to uniform kx,ky '''
     F_kxky_tile = griddata((kxp_tile.ravel(), kyp_tile.ravel()), F_kmodtheta_tile.ravel(), 
                            (kx_tile, ky_tile), method='linear', fill_value=0) 
     
     return kmod, F_kmod, kx, ky, F_kxky_tile
 
+""" We define a random phase model to build a sea surface elevation"""
 def eta_random(t, kx_tile, ky_tile, F_kxky_tile, x_tile, y_tile):
 
     ''' Function to generate a random field given kx-ky spectrum and the x-y-array. Only
@@ -329,9 +358,9 @@ dk_xrft = (F_xrft.freq_r[1]-F_xrft.freq_r[0]).values*2*np.pi
 
 # 3) Jiarong's code
 def jspectrum_integration(eta, L, N, CHECK=False):
-    """ This function performs azimuthal integration of the 2D spectrum (Notice it's 2D instead of 3D with the frequency as well).
+    ''' This function performs azimuthal integration of the 2D spectrum (Notice it's 2D instead of 3D with the frequency as well).
         When in doubt, enable CHECK so that the integration is printed out at each step to make sure that 
-        units are consistent and we always recover the variance of the data. """  
+        units are consistent and we always recover the variance of the data. '''
     if CHECK: print (np.var(eta))
     spectrum = np.fft.fft2(eta) / (N*N)**0.5 # FFT normalization 
     F = np.absolute(spectrum)**2 / N**2 # Per area normalization
@@ -362,3 +391,33 @@ print('jiarong (=griddata): %f' %(np.sum(F_jiarong)*dk_j))
 
 
 plt.show()
+
+
+"""
+# Expected output
+```
+=====================================
+PART 1
+>From an analytical spectrum, recover variances and plot omnidir spec
+Working on case number 1
+var fine: 39.281026
+var F_k = 39.281026
+var F_kxky (interpolated from F_ktheta) = 31.145410
+var from azimuthal_integral = 31.145410
+Working on case number 2
+var fine: 1.040840
+var F_k = 1.040843
+var F_kxky (interpolated from F_ktheta) = 1.038498
+var from azimuthal_integral = 1.038498
+
+=====================================
+PART 2
+>Computing spectra from synthetic eta field
+kpHs = 0.246694
+variances check
+geostrokit: 0.154155
+xrft: 0.140847
+jiarong (=griddata): 0.153773
+```
+"""
+

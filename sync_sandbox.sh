@@ -12,7 +12,8 @@ rsync -av --include='*/' --include='*.py' --include='*.c' --include='*.txt' --ex
 rsync -av --include='*/' --include='*.py' --include='*.c' --include='*.txt' --exclude='*' $OUTPUT $INPUT
 
 # verif_spectrum
-INPUT="verif_spectrum/"
-OUTPUT=$MYSANDBOX/hugoj/verif_spectrum/
+#
+INPUT=$MYSANDBOX/hugoj/verif_spectrum/
+OUTPUT=verif_spectrum/
 rsync -av --include='*/' --include='*.py' --include='*.md' --include='*.txt' --include='Makefile' --exclude='*' $INPUT $OUTPUT
 rsync -av --include='*/' --include='*.py' --include='*.md' --include='*.txt' --include='Makefile' --exclude='*' $OUTPUT $INPUT
