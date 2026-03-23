@@ -1,18 +1,11 @@
 /**
-# Field scale wave breaking (multilayer solver)
-*/
+ # Read/write namelist parameters
 
-// #include "grid/multigrid.h"
-// #include "layered/hydro.h"
-// #include "layered/nh.h"
-// #include "layered/remap.h"
-// #include "layered/perfs.h"
-// #include "input.h" // Used for older input method (matrices of quantities)
+  This code test the routine from bderembl/libs/extra.h
 
-// Updated 2024/12/20: the newest Basilisk output_matrix is already compatible with MPI
-// #include "output_mpi.h" // Antoon's function for MPI compatible matrix output
+**/
 #include <bderembl/libs/extra.h>
-//#include <spectrum.h>
+
 
 
 
