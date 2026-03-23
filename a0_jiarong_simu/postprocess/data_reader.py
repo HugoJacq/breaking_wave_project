@@ -3,7 +3,7 @@ import numpy as np
 from xgcm import Grid
 
 # read netcdf, set up for xgcm
-def read_data(filename: string, dtype='float32'):
+def read_data(filename: string, chunks='auto', dtype='float32'):
     """
     This function reads the output of Basilisk (using bderembl/libs/netcdf_pas.h)
         and return a dataset with xgcm coordinates to allow for easy differentiation
@@ -13,7 +13,7 @@ def read_data(filename: string, dtype='float32'):
     OUPUT:
         dataset: a xr.Dataset
     """
-    ds = xr.open_mfdataset(filename)
+    ds = xr.open_mfdataset(filename, chunks=chunks)
     zb = ds.zb[0,0,0].values
     
     # building z and left side of z

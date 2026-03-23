@@ -38,8 +38,8 @@ from fftlib import *
 """
 
 # My data
-filename="/home/jacqhugo/basilisk/wiki/sandbox/hugoj/reproducing_jiarongs_plots/N10_P0.02_L15/out.nc"
-#filename="/home/jacqhugo/basilisk/wiki/sandbox/hugoj/reproducing_jiarongs_plots/N10_P0.02_L30/out.nc"
+#filename="/home/jacqhugo/basilisk/wiki/sandbox/hugoj/reproducing_jiarongs_plots/N10_P0.02_L15/out.nc"
+filename="/home/jacqhugo/basilisk/wiki/sandbox/hugoj/reproducing_jiarongs_plots/N10_P0.02_L30/out.nc"
 # getting back Jiarong's data
 Jpath = "data_Jiarong/"
 save_nc = './data.nc'
@@ -102,7 +102,7 @@ if False:
     colors = plt.get_cmap('plasma')(np.linspace(0, 1, len(at_t)))
     
     """
-    Verification of parceval equalities
+    Verification of Parceval equalities
     """
     if False:
         it = -1
@@ -207,44 +207,61 @@ if False:
 if True:
     print("* Profiles")
         
-    print('Computing profiles ...')
-
     time_ =  120 # s
-    znew = np.arange(-8,0.1,0.1)
+    znew = np.arange(-8,0.1,0.1) # cartesian Z to interpolate on
     
-    # gradients
+    file_grads = ['dudz.nc','dudy.nc','dudx.nc','dvdz.nc','dvdy.nc','dvdx.nc','dwdz.nc','dwdy.nc', 'dwdx.nc']
+    file_omeg = ['omegaxp.nc','omegayp.nc','omegazp.nc','enstrophy.nc']
+
+    """### We first need to compute the required quantities: gradients, omega and dissipation"""
+    # Note about performances (memory and compute):
+    # We compute in a open-compute-close manner to avoid memory overload,
+    # in combination with dask's chunks.
+
+    chunks = {'time':5, 'x':64, 'y':64, 'zl':-1}
+    # We need the grid for the following
+    ds, grid = read_data(filename, chunks=chunks)    
+
+    # main file
     if not os.path.isfile(save_nc):
-        print('I need to compute diags ...')
-        ds, grid = read_data(filename)
+        print('- I need to save the data in a proper format first !')
+        ds.to_netcdf(save_nc)
+    ds.close()
+
+    # gradients
+    if not os.path.isfile("dudz.nc"):
+        print('- I need to compute grads ...')
+        ds = xr.open_dataset(save_nc, chunks=chunks)
         ds, update = grad_velocities(ds, grid)
-        # if update:
-        #     ds = 
-        #     for name in ['dudz','dudy','dudx','dvdz','dvdy','dvdx','dwdz','dwdy', 'dwdx']:
-        #
-                
+        if update:
+            for name in file_grads:
+                ds[name[:-3]].to_netcdf(name)
+        ds.close()
+    
+    # enstrophy
+    if not os.path.isfile("enstrophy.nc"):  
+        print('- I need to compute enstrophy ...')
+        ds = xr.open_mfdataset(file_grads+[save_nc], chunks=chunks)
         ds, update = vorticity(ds, grid)
+        if update:
+            for name in file_omeg:
+                ds[name[:-3]].to_netcdf(name)
+        ds.close() 
+    
+    # Dissipation
+    if not os.path.isfile("epsilon.nc"):  
+        print('- I need to compute dissipation ...')
+        ds = xr.open_mfdataset(file_grads+[save_nc], chunks=chunks)
         ds, update = dissipation(ds, grid)
-        if update: 
-            print(f'saving diags to {save_nc}')
-            
-            t0 = ds.isel(time=0)
-            t0.to_netcdf('output.nc', mode='w') #, unlimited_dims=['time'])
-            for i in range(1, len(ds.time)):
-                print('saving time t=',ds.time[i].values)
-                chunk = ds.isel(time=i)           # still lazy
-                chunk = chunk.load()              # compute ONLY this slice
-                chunk.to_netcdf('output.nc', mode='a')
-                del chunk
+        if update:
+            for name in ['epsilon']:
+                ds[name].to_netcdf(name+'.nc')
+        ds.close() 
 
-            #ds.to_netcdf(save_nc)
-
-    else:
-        ds = xr.open_dataset(save_nc)
-        grid = build_grid(ds)
-    raise Exception
-
-    # Dask performances
-    ds = ds.chunk({'time':5, 'x':64, 'y':64, 'zl':-1})
+    # We have all the pieces ! lets open everything
+    print('- Required data: computed')
+    ds = xr.open_mfdataset([save_nc]+file_grads+file_omeg+["epsilon.nc"], chunks=chunks)
+    #ds = ds.chunk({'time':5, 'x':64, 'y':64, 'zl':-1})  # Dask performances
     
     # initial profiles
     ds0 = ds.sel(time=0)
@@ -253,8 +270,9 @@ if True:
     diss_lagr0 = ds0['epsilon'].mean(['x','y']).compute()
     z_lagr0 = ds0.z.mean(['x','y']).compute()
     
-    # t=120s profiles
-    ds1 = ds.sel(time=time_)
+
+    ds1 = ds.sel(time=time_) # select the time at which to plot profiles
+    
 
     # print('starting interp1')
     # t1 = time.time()
@@ -264,6 +282,8 @@ if True:
     # u_interp = u_interp.assign_coords(znew=znew) 
     # t2 = time.time()
     # print(f'interp1 done, {int(t2-t1)} s')
+
+    """We can now compute the different avg methods"""
 
     z_lagr = ds1.z.mean(['x','y'])
     ux_interp1 = interpz(ds1.z, ds1['u.x'], znew, fill_value=np.nan).mean(dim=['x','y']).compute()
@@ -373,7 +393,7 @@ if True:
         ax[2].set_xlim([1e-3,10])
         
         # nicer figures
-        ax[1].set_title(r'$t=%d s'%time_)
+        ax[1].set_title(r'$t=%d s$'%time_)
         for axe in ax:
             axe.legend(frameon=False)
             axe.set_ylim([-10,0])

@@ -57,7 +57,7 @@ def grad_velocities(ds, grid):
         ds['dwdy'] = (dwdy - ds['dwdz']*dzdy).compute()
         ds['dwdx'] = (dwdx - ds['dwdz']*dzdx).compute()
         
-        print('Fields gradient computed!')
+        # print('Fields gradient computed!')
         
         del(dudx, dudy, dudzl, dvdx, dvdy, dvdzl, dwdx, dwdy, dwdzl, dzdx, dzdy, dzdzl)
         gc.collect()
